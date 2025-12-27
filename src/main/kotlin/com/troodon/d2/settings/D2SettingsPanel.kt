@@ -25,8 +25,8 @@ class D2SettingsPanel(private val project: Project) {
     fun createPanel(): JComponent {
         // Setup D2 CLI path field with file browser
         val descriptor = FileChooserDescriptorFactory.createSingleFileDescriptor()
-        descriptor.withTitle("Select D2 CLI Executable")
-        descriptor.withDescription("Choose the d2 executable file")
+            .withTitle("Select D2 CLI Executable")
+            .withDescription("Choose the d2 executable file")
         d2PathField.addActionListener {
             com.intellij.openapi.fileChooser.FileChooser.chooseFile(descriptor, project, null) { file ->
                 d2PathField.text = file.path

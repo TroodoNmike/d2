@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.troodon.d2"
-version = "1.0-"
+version = "1.0"
 
 repositories {
     mavenCentral()
@@ -17,7 +17,7 @@ repositories {
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin.html
 dependencies {
     intellijPlatform {
-        intellijIdea("2024.3")
+        intellijIdeaCommunity("2025.1")
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
 
 
@@ -56,10 +56,6 @@ tasks {
     withType<JavaCompile> {
         sourceCompatibility = "21"
         targetCompatibility = "21"
-    }
-
-    test {
-        jvmArgs("-Xshare:off")  // Disable CDS to avoid warning about custom class loader
     }
 }
 

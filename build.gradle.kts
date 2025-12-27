@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.troodon.d2"
-version = "1.0"
+version = "1.0.1"
 
 repositories {
     mavenCentral()
@@ -34,7 +34,7 @@ intellijPlatform {
         }
 
         changeNotes = """
-            <h3>Version 1.0.0</h3>
+            <h3>Version 1.0.1</h3>
             <ul>
                 <li>Initial release</li>
                 <li>D2 language syntax highlighting</li>

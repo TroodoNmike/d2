@@ -57,6 +57,10 @@ tasks {
         sourceCompatibility = "21"
         targetCompatibility = "21"
     }
+
+    test {
+        jvmArgs("-Xshare:off")  // Disable CDS to avoid warning about custom class loader
+    }
 }
 
 kotlin {

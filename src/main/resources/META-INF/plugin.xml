@@ -1,0 +1,95 @@
+<!-- Plugin Configuration File: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <!-- Unique identifier of the plugin. It should be FQN, cannot be changed between the plugin versions. -->
+    <id>com.troodon.d2</id>
+
+    <!-- Public plugin name should be written in Title Case.
+         Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-name -->
+    <name>D2 Diagram</name>
+
+    <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
+    <vendor url="https://github.com/TroodoNmike">TroodoN</vendor>
+
+    <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
+         Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-description -->
+    <description><![CDATA[
+        <h2>D2 Language Support</h2>
+        <p>Comprehensive support for D2 (Declarative Diagramming) language in IntelliJ-based IDEs.</p>
+
+        <h3>Features</h3>
+        <ul>
+            <li><strong>Syntax Highlighting</strong> - Color-coded syntax for D2 diagram files</li>
+            <li><strong>Live Preview</strong> - Real-time diagram rendering with auto-refresh</li>
+            <li><strong>Split Editor</strong> - Edit D2 code and preview side-by-side</li>
+            <li><strong>Auto-format</strong> - Optional automatic code formatting using d2 fmt</li>
+            <li><strong>Interactive Preview</strong> - Zoom, pan, and export diagrams as PNG</li>
+            <li><strong>Code Editing</strong> - Brace matching, commenting, and code style settings</li>
+            <li><strong>Configurable CLI Path</strong> - Custom D2 CLI executable location</li>
+        </ul>
+
+        <h3>Requirements</h3>
+        <p>D2 CLI must be installed on your system. Install from <a href="https://d2lang.com">d2lang.com</a></p>
+
+        <h3>Getting Started</h3>
+        <ol>
+            <li>Install D2 CLI: <code>curl -fsSL https://d2lang.com/install.sh | sh -s --</code></li>
+            <li>Configure D2 CLI path in Settings → Tools → D2 Diagram</li>
+            <li>Open or create a .d2 file</li>
+            <li>Start creating diagrams with live preview!</li>
+        </ol>
+    ]]></description>
+
+    <!-- What's new in this version -->
+    <change-notes><![CDATA[
+        <h3>Version 1.0.0</h3>
+        <ul>
+            <li>Initial release</li>
+            <li>D2 language syntax highlighting</li>
+            <li>Live preview with auto-refresh</li>
+            <li>Split editor mode (code + preview)</li>
+            <li>Zoom and pan controls for diagrams</li>
+            <li>Export diagrams to PNG</li>
+            <li>Auto-format with d2 fmt</li>
+            <li>Configurable D2 CLI path</li>
+            <li>Brace matching and code commenting</li>
+            <li>Color settings customization</li>
+        </ul>
+    ]]></change-notes>
+
+    <!-- Product and plugin compatibility requirements.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
+    <depends>com.intellij.modules.platform</depends>
+
+    <!-- Extensions defined by the plugin.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
+    <extensions defaultExtensionNs="com.intellij">
+        <fileType
+                name="D2"
+                language="D2"
+                extensions="d2"
+                implementationClass="com.troodon.d2.lang.D2FileType"/>
+        <lang.parserDefinition
+                language="D2"
+                implementationClass="com.troodon.d2.lang.D2ParserDefinition"/>
+        <syntaxHighlighter
+                key="D2"
+                implementationClass="com.troodon.d2.editor.D2SyntaxHighlighter"/>
+        <lang.braceMatcher
+                language="D2"
+                implementationClass="com.troodon.d2.editor.D2PairedBraceMatcher"/>
+        <lang.commenter
+                language="D2"
+                implementationClass="com.troodon.d2.editor.D2Commenter"/>
+        <langCodeStyleSettingsProvider
+                implementation="com.troodon.d2.settings.D2LanguageCodeStyleSettingsProvider"/>
+        <colorSettingsPage
+                implementation="com.troodon.d2.settings.D2ColorSettingsPage"/>
+        <fileEditorProvider
+                implementation="com.troodon.d2.preview.D2SplitEditorProvider"/>
+        <projectConfigurable
+                parentId="tools"
+                instance="com.troodon.d2.settings.D2SettingsConfigurable"
+                id="com.troodon.d2.settings"
+                displayName="D2 Diagram"/>
+    </extensions>
+</idea-plugin>

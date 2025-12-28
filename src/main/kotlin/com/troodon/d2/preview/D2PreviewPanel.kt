@@ -284,13 +284,20 @@ class D2PreviewPanel(
                 tempOutputFile = FileUtil.createTempFile("d2-preview", ".png", true)
 
                 // Execute d2 CLI to generate PNG directly from source
-                val d2Path = D2SettingsState.getInstance(project).getEffectiveD2Path()
-                val process = ProcessBuilder(
-                    d2Path,
-                    "--sketch=false",
-                    tempSourceFile!!.absolutePath,
-                    tempOutputFile!!.absolutePath
-                ).redirectErrorStream(true).start()
+                val settings = D2SettingsState.getInstance(project)
+                val d2Path = settings.getEffectiveD2Path()
+                val d2Arguments = settings.d2Arguments
+
+                // Build command with arguments
+                val command = mutableListOf(d2Path)
+                if (d2Arguments.isNotBlank()) {
+                    // Split arguments by spaces, preserving quoted strings
+                    command.addAll(d2Arguments.split(Regex("\\s+(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)")))
+                }
+                command.add(tempSourceFile!!.absolutePath)
+                command.add(tempOutputFile!!.absolutePath)
+
+                val process = ProcessBuilder(command).redirectErrorStream(true).start()
 
                 val exitCode = process.waitFor()
                 

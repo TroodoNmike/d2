@@ -5,6 +5,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
+import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -18,6 +19,7 @@ import javax.swing.JPanel
 class D2SettingsPanel(private val project: Project) {
 
     private val d2PathField = TextFieldWithBrowseButton()
+    private val d2ArgumentsField = JBTextField()
     private val versionLabel = JBLabel()
     private val statusLabel = JBLabel()
     private val refreshButton = JButton("Validate")
@@ -40,6 +42,7 @@ class D2SettingsPanel(private val project: Project) {
         // Load current setting
         val settings = D2SettingsState.getInstance(project)
         d2PathField.text = settings.d2CliPath
+        d2ArgumentsField.text = settings.d2Arguments
 
         updateVersion()
 
@@ -49,6 +52,8 @@ class D2SettingsPanel(private val project: Project) {
 
         val panel = FormBuilder.createFormBuilder()
             .addLabeledComponent("D2 CLI Path:", d2PathField)
+            .addLabeledComponent("D2 Arguments:", d2ArgumentsField)
+            .addTooltip("Additional arguments to pass to d2 command (e.g., --sketch, --theme=200)")
             .addLabeledComponent("D2 CLI Status:", statusPanel)
             .addLabeledComponent("D2 Version:", versionLabel)
             .addComponentFillVertically(JPanel(), 0)
@@ -69,18 +74,20 @@ class D2SettingsPanel(private val project: Project) {
 
     fun isModified(): Boolean {
         val settings = D2SettingsState.getInstance(project)
-        return d2PathField.text != settings.d2CliPath
+        return d2PathField.text != settings.d2CliPath || d2ArgumentsField.text != settings.d2Arguments
     }
 
     fun apply() {
         val settings = D2SettingsState.getInstance(project)
         settings.d2CliPath = d2PathField.text
+        settings.d2Arguments = d2ArgumentsField.text
         updateVersion()
     }
 
     fun reset() {
         val settings = D2SettingsState.getInstance(project)
         d2PathField.text = settings.d2CliPath
+        d2ArgumentsField.text = settings.d2Arguments
         updateVersion()
     }
 

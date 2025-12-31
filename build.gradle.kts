@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.troodon.d2"
-version = "1.0.2"
+version = "1.0.3"
 
 repositories {
     mavenCentral()
@@ -34,18 +34,10 @@ intellijPlatform {
         }
 
         changeNotes = """
-            <h3>Version 1.0.2</h3>
+            <h3>Version 1.0.3</h3>
             <ul>
-                <li>Initial release</li>
-                <li>D2 language syntax highlighting</li>
-                <li>Live preview with auto-refresh</li>
-                <li>Split editor mode (code + preview)</li>
-                <li>Zoom and pan controls for diagrams</li>
-                <li>Export diagrams to PNG</li>
-                <li>Auto-format with d2 fmt</li>
-                <li>Configurable D2 CLI path</li>
-                <li>Brace matching and code commenting</li>
-                <li>Color settings customization</li>
+                <li>Added preview mode toggle (PNG or SVG/HTML) directly in the preview toolbar.</li>
+                <li>Export now respects the active preview mode (exports .png or .svg accordingly).</li>
             </ul>
         """.trimIndent()
     }

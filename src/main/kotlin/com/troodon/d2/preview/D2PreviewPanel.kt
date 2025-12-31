@@ -249,7 +249,12 @@ class D2PreviewPanel(
                 // Execute d2 CLI to generate output file
                 val settings = D2SettingsState.getInstance(project)
                 val d2Path = settings.getEffectiveD2Path()
-                val d2Arguments = settings.d2Arguments
+                var d2Arguments = settings.d2Arguments
+
+                // Exclude --animate-interval when using PNG renderer
+                if (currentRenderer is PngPreviewRenderer) {
+                    d2Arguments = d2Arguments.replace(Regex("--animate-interval=\\d+"), "").trim()
+                }
 
                 // Build command with arguments
                 val command = mutableListOf(d2Path)

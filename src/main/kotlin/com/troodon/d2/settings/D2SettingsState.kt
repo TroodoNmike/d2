@@ -8,12 +8,14 @@ import com.intellij.openapi.project.Project
 import com.intellij.util.messages.Topic
 import com.intellij.util.xmlb.XmlSerializerUtil
 
+const val DEFAULT_D2_ARGUMENTS = "--animate-interval=1000"
+
 @Service(Service.Level.PROJECT)
 @State(name = "D2Settings", storages = [Storage("d2Settings.xml")])
 class D2SettingsState : PersistentStateComponent<D2SettingsState> {
 
     var d2CliPath: String = "" // Empty by default - will auto-detect from common paths
-    var d2Arguments: String = "" // Additional arguments to pass to d2 command (e.g., --sketch)
+    var d2Arguments: String = DEFAULT_D2_ARGUMENTS // Additional arguments to pass to d2 command (e.g., --sketch)
 
     /**
      * Gets the effective D2 CLI path to use for execution.

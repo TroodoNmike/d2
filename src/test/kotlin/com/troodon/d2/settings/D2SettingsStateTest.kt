@@ -13,6 +13,12 @@ class D2SettingsStateTest {
     }
 
     @Test
+    fun `test default d2Arguments has animate-interval`() {
+        val state = D2SettingsState()
+        assertEquals(DEFAULT_D2_ARGUMENTS, state.d2Arguments)
+    }
+
+    @Test
     fun `test getState returns self`() {
         val state = D2SettingsState()
         val returnedState = state.state

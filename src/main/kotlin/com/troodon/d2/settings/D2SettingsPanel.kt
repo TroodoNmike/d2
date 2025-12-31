@@ -1,5 +1,6 @@
 package com.troodon.d2.settings
 
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
@@ -20,6 +21,13 @@ class D2SettingsPanel(private val project: Project) {
 
     private val d2PathField = TextFieldWithBrowseButton()
     private val d2ArgumentsField = JBTextField()
+    private val resetArgumentsButton = JButton(AllIcons.Actions.Rollback).apply {
+        toolTipText = "Reset to default value"
+        preferredSize = java.awt.Dimension(24, 24)
+        isBorderPainted = false
+        isFocusPainted = false
+        isContentAreaFilled = false
+    }
     private val versionLabel = JBLabel()
     private val statusLabel = JBLabel()
     private val refreshButton = JButton("Validate")
@@ -39,6 +47,10 @@ class D2SettingsPanel(private val project: Project) {
             updateVersion()
         }
 
+        resetArgumentsButton.addActionListener {
+            d2ArgumentsField.text = DEFAULT_D2_ARGUMENTS
+        }
+
         // Load current setting
         val settings = D2SettingsState.getInstance(project)
         d2PathField.text = settings.d2CliPath
@@ -50,10 +62,15 @@ class D2SettingsPanel(private val project: Project) {
         statusPanel.add(statusLabel)
         statusPanel.add(refreshButton)
 
+        // Create a panel for d2Arguments field with reset button
+        val argumentsPanel = JPanel(BorderLayout(5, 0))
+        argumentsPanel.add(d2ArgumentsField, BorderLayout.CENTER)
+        argumentsPanel.add(resetArgumentsButton, BorderLayout.EAST)
+
         val panel = FormBuilder.createFormBuilder()
             .addLabeledComponent("D2 CLI Path:", d2PathField)
-            .addLabeledComponent("D2 Arguments:", d2ArgumentsField)
-            .addTooltip("Additional arguments to pass to d2 command (e.g., --sketch, --theme=200)")
+            .addLabeledComponent("D2 Arguments:", argumentsPanel)
+            .addTooltip("Additional arguments to pass to d2 command (e.g., --sketch, --theme=200 --animate-interval=1000)")
             .addLabeledComponent("D2 CLI Status:", statusPanel)
             .addLabeledComponent("D2 Version:", versionLabel)
             .addComponentFillVertically(JPanel(), 0)

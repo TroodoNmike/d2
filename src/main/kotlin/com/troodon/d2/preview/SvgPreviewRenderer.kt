@@ -2,28 +2,26 @@ package com.troodon.d2.preview
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.project.Project
 import com.intellij.ui.jcef.JBCefApp
 import com.intellij.ui.jcef.JBCefBrowser
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefLoadHandlerAdapter
+import org.cef.browser.CefMessageRouter
+import org.cef.handler.CefMessageRouterHandlerAdapter
 import java.awt.BorderLayout
 import java.io.File
 import java.nio.file.Files
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
-import javax.swing.SwingUtilities
-import javax.swing.Timer
 
-class SvgPreviewRenderer(private val project: Project) : PreviewRenderer {
+class SvgPreviewRenderer : PreviewRenderer {
 
     private val LOG = Logger.getInstance(SvgPreviewRenderer::class.java)
     private val browser: JBCefBrowser? = if (JBCefApp.isSupported()) JBCefBrowser() else null
     private val panel = JPanel(BorderLayout())
 
-    private var zoomLevel = 1.0
     private val zoomStep = 0.1
     private val minZoom = 0.1
     private val maxZoom = 5.0
@@ -32,10 +30,62 @@ class SvgPreviewRenderer(private val project: Project) : PreviewRenderer {
     private var isBrowserReady = false
     private var pendingRenderTask: (() -> Unit)? = null
 
+    // Track zoom and scroll state (volatile for thread safety)
+    @Volatile
+    private var savedZoom: Double = 1.0
+    @Volatile
+    private var savedScrollLeft: Int = 0
+    @Volatile
+    private var savedScrollTop: Int = 0
+
     init {
         if (browser != null) {
             panel.add(browser.component, BorderLayout.CENTER)
             LOG.info("JCEF browser initialized successfully")
+
+            // Add message router to capture console messages
+            val msgRouter = CefMessageRouter.create()
+            msgRouter.addHandler(object : CefMessageRouterHandlerAdapter() {
+                override fun onQuery(
+                    browser: CefBrowser?,
+                    frame: CefFrame?,
+                    queryId: Long,
+                    request: String?,
+                    persistent: Boolean,
+                    callback: org.cef.callback.CefQueryCallback?
+                ): Boolean {
+                    if (request?.startsWith("D2_STATE:") == true) {
+                        try {
+                            val json = request.substring(9)
+                            val zoomMatch = Regex("\"zoom\":(\\d+\\.?\\d*)").find(json)
+                            val scrollLeftMatch = Regex("\"scrollLeft\":(\\d+)").find(json)
+                            val scrollTopMatch = Regex("\"scrollTop\":(\\d+)").find(json)
+
+                            zoomMatch?.groupValues?.get(1)?.toDoubleOrNull()?.let {
+                                val oldZoom = savedZoom
+                                savedZoom = it
+                                LOG.info("Updated savedZoom: $oldZoom -> $it")
+                            }
+                            scrollLeftMatch?.groupValues?.get(1)?.toIntOrNull()?.let {
+                                val oldScrollLeft = savedScrollLeft
+                                savedScrollLeft = it
+                                LOG.info("Updated savedScrollLeft: $oldScrollLeft -> $it")
+                            }
+                            scrollTopMatch?.groupValues?.get(1)?.toIntOrNull()?.let {
+                                val oldScrollTop = savedScrollTop
+                                savedScrollTop = it
+                                LOG.info("Updated savedScrollTop: $oldScrollTop -> $it")
+                            }
+                        } catch (e: Exception) {
+                            LOG.warn("Failed to parse state", e)
+                        }
+                        callback?.success("")
+                        return true
+                    }
+                    return false
+                }
+            }, true)
+            browser.jbCefClient.cefClient.addMessageRouter(msgRouter)
 
             // Add load handler to detect when browser is ready
             browser.jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
@@ -133,8 +183,15 @@ class SvgPreviewRenderer(private val project: Project) : PreviewRenderer {
                         return@invokeLater
                     }
 
+                    // Capture state at the start to avoid race conditions
+                    val currentZoom = savedZoom
+                    val currentScrollLeft = savedScrollLeft
+                    val currentScrollTop = savedScrollTop
+
                     // Read SVG content
                     val svgContent = Files.readString(outputFile.toPath())
+
+                    LOG.info("Rendering with captured state - zoom: $currentZoom, scrollLeft: $currentScrollLeft, scrollTop: $currentScrollTop")
 
                 // Create HTML wrapper with zoom and pan support
                 val html = """
@@ -183,17 +240,62 @@ class SvgPreviewRenderer(private val project: Project) : PreviewRenderer {
                             let startY = 0;
                             let scrollLeft = 0;
                             let scrollTop = 0;
+                            let currentZoom = $currentZoom;
+                            let isInitializing = true;
+                            let updateTimeout;
 
                             window.addEventListener('DOMContentLoaded', function() {
                                 const viewport = document.getElementById('viewport');
+                                const container = document.getElementById('svg-container');
 
-                                // Save scroll position periodically
+                                // Function to update Kotlin state
+                                function updateKotlinState() {
+                                    // Don't send updates during initialization
+                                    if (isInitializing) {
+                                        console.log('Skipping state update - still initializing');
+                                        return;
+                                    }
+                                    const state = {
+                                        zoom: currentZoom,
+                                        scrollLeft: viewport.scrollLeft,
+                                        scrollTop: viewport.scrollTop
+                                    };
+                                    console.log('Sending state update:', state);
+                                    // Send state to Kotlin via message router
+                                    if (window.cefQuery) {
+                                        window.cefQuery({
+                                            request: 'D2_STATE:' + JSON.stringify(state),
+                                            onSuccess: function(response) {},
+                                            onFailure: function(error_code, error_message) {
+                                                console.error('Failed to send state:', error_code, error_message);
+                                            }
+                                        });
+                                    } else {
+                                        console.warn('window.cefQuery not available');
+                                    }
+                                }
+
+                                // Throttle state updates to avoid too many messages
                                 function saveScrollPosition() {
-                                    window.savedScrollLeft = viewport.scrollLeft;
-                                    window.savedScrollTop = viewport.scrollTop;
+                                    clearTimeout(updateTimeout);
+                                    updateTimeout = setTimeout(updateKotlinState, 100);
                                 }
 
                                 viewport.addEventListener('scroll', saveScrollPosition);
+
+                                // Restore saved zoom and scroll from Kotlin
+                                container.style.transform = 'scale(' + currentZoom + ')';
+
+                                // Use setTimeout to ensure DOM is fully ready and layout is complete
+                                setTimeout(function() {
+                                    viewport.scrollLeft = $currentScrollLeft;
+                                    viewport.scrollTop = $currentScrollTop;
+
+                                    // Allow state updates after restoration is complete
+                                    setTimeout(function() {
+                                        isInitializing = false;
+                                    }, 200);
+                                }, 50);
 
                                 // Handle mouse wheel for zoom with Ctrl key
                                 viewport.addEventListener('wheel', function(e) {
@@ -219,8 +321,11 @@ class SvgPreviewRenderer(private val project: Project) : PreviewRenderer {
                                         // Clamp between min and max zoom
                                         newScale = Math.max(0.1, Math.min(5.0, newScale));
 
+                                        currentZoom = newScale;
                                         container.style.transform = 'scale(' + newScale + ')';
-                                        saveScrollPosition();
+                                        // Immediate update for zoom, no throttling
+                                        clearTimeout(updateTimeout);
+                                        updateKotlinState();
                                     }
                                 }, { passive: false });
 
@@ -249,12 +354,17 @@ class SvgPreviewRenderer(private val project: Project) : PreviewRenderer {
                                 viewport.addEventListener('mouseup', function() {
                                     isPanning = false;
                                     viewport.classList.remove('dragging');
-                                    saveScrollPosition();
+                                    // Delayed update to ensure scroll position is final
+                                    setTimeout(updateKotlinState, 50);
                                 });
 
                                 viewport.addEventListener('mouseleave', function() {
-                                    isPanning = false;
-                                    viewport.classList.remove('dragging');
+                                    if (isPanning) {
+                                        isPanning = false;
+                                        viewport.classList.remove('dragging');
+                                        // Save state when drag ends
+                                        setTimeout(updateKotlinState, 50);
+                                    }
                                 });
                             });
                         </script>
@@ -272,13 +382,7 @@ class SvgPreviewRenderer(private val project: Project) : PreviewRenderer {
                     // Load HTML into browser
                     browser.loadHTML(html)
 
-                    // Apply zoom after a short delay to ensure content is loaded
-                    SwingUtilities.invokeLater {
-                        Timer(100) { _ -> updateZoom() }.apply {
-                            isRepeats = false
-                            start()
-                        }
-                    }
+                    // No need to call updateZoom() - the HTML already has the saved zoom injected
                 } catch (e: Exception) {
                     LOG.error("Failed to load SVG", e)
                 }
@@ -295,15 +399,17 @@ class SvgPreviewRenderer(private val project: Project) : PreviewRenderer {
     }
 
     override fun zoomIn() {
-        if (zoomLevel < maxZoom) {
-            zoomLevel = (zoomLevel + zoomStep).coerceAtMost(maxZoom)
+        if (savedZoom < maxZoom) {
+            savedZoom = (savedZoom + zoomStep).coerceAtMost(maxZoom)
+            LOG.info("Zoom in button: savedZoom = $savedZoom")
             updateZoom()
         }
     }
 
     override fun zoomOut() {
-        if (zoomLevel > minZoom) {
-            zoomLevel = (zoomLevel - zoomStep).coerceAtLeast(minZoom)
+        if (savedZoom > minZoom) {
+            savedZoom = (savedZoom - zoomStep).coerceAtLeast(minZoom)
+            LOG.info("Zoom out button: savedZoom = $savedZoom")
             updateZoom()
         }
     }
@@ -315,20 +421,22 @@ class SvgPreviewRenderer(private val project: Project) : PreviewRenderer {
     }
 
     private fun updateZoom() {
+        // Use savedZoom directly, don't overwrite it
         browser?.cefBrowser?.executeJavaScript(
             """
             (function() {
                 var container = document.getElementById('svg-container');
-                console.log('Applying zoom: $zoomLevel, container exists:', !!container);
+                console.log('Applying zoom: $savedZoom, container exists:', !!container);
                 if (container) {
-                    container.style.transform = 'scale($zoomLevel)';
+                    currentZoom = $savedZoom;
+                    container.style.transform = 'scale($savedZoom)';
                     console.log('Transform applied:', container.style.transform);
 
                     // Restore scroll position if saved
                     var viewport = document.getElementById('viewport');
-                    if (viewport && window.savedScrollLeft !== undefined && window.savedScrollTop !== undefined) {
-                        viewport.scrollLeft = window.savedScrollLeft;
-                        viewport.scrollTop = window.savedScrollTop;
+                    if (viewport) {
+                        viewport.scrollLeft = $savedScrollLeft;
+                        viewport.scrollTop = $savedScrollTop;
                     }
                 }
             })();

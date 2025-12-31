@@ -5,6 +5,7 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.project.Project
+import com.intellij.util.messages.Topic
 import com.intellij.util.xmlb.XmlSerializerUtil
 
 @Service(Service.Level.PROJECT)
@@ -44,5 +45,14 @@ class D2SettingsState : PersistentStateComponent<D2SettingsState> {
         fun getInstance(project: Project): D2SettingsState {
             return project.getService(D2SettingsState::class.java)
         }
+
+        val SETTINGS_CHANGED_TOPIC: Topic<SettingsChangeListener> = Topic.create(
+            "D2 Settings Changed",
+            SettingsChangeListener::class.java
+        )
+    }
+
+    interface SettingsChangeListener {
+        fun settingsChanged()
     }
 }

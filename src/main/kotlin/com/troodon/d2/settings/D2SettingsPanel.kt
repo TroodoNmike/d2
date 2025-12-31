@@ -80,7 +80,7 @@ class D2SettingsPanel(private val project: Project) {
     fun apply() {
         val settings = D2SettingsState.getInstance(project)
         settings.d2CliPath = d2PathField.text
-        settings.d2Arguments = d2ArgumentsField.text
+        settings.d2Arguments = d2ArgumentsField.text.trim()
         updateVersion()
     }
 

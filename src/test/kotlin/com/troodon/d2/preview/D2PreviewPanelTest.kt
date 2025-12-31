@@ -18,7 +18,7 @@ class D2PreviewPanelTest : BasePlatformTestCase() {
         val editor = myFixture.editor
         val virtualFile = file.virtualFile
 
-        previewPanel = D2PreviewPanel(project, virtualFile, editor)
+        previewPanel = D2PreviewPanel(project, editor)
     }
 
     override fun tearDown() {
@@ -71,7 +71,7 @@ class D2PreviewPanelTest : BasePlatformTestCase() {
         val editor = myFixture.editor
         val virtualFile = file.virtualFile
 
-        val panel = D2PreviewPanel(project, virtualFile, editor)
+        val panel = D2PreviewPanel(project, editor)
         try {
             assertNotNull(panel.component)
         } finally {
@@ -131,7 +131,7 @@ class D2PreviewPanelTest : BasePlatformTestCase() {
         val editor = myFixture.editor
         val virtualFile = file.virtualFile
 
-        val panel = D2PreviewPanel(project, virtualFile, editor)
+        val panel = D2PreviewPanel(project, editor)
         try {
             assertNotNull(panel.component)
         } finally {
@@ -166,7 +166,7 @@ class D2PreviewPanelTest : BasePlatformTestCase() {
         val editor = myFixture.editor
         val virtualFile = file.virtualFile
 
-        val panel = D2PreviewPanel(project, virtualFile, editor)
+        val panel = D2PreviewPanel(project, editor)
         try {
             assertNotNull(panel.component)
         } finally {

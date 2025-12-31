@@ -19,6 +19,8 @@ class D2SettingsConfigurable(private val project: Project) : Configurable {
 
     override fun apply() {
         settingsPanel?.apply()
+        // Notify that settings have changed
+        project.messageBus.syncPublisher(D2SettingsState.SETTINGS_CHANGED_TOPIC).settingsChanged()
     }
 
     override fun reset() {

@@ -24,7 +24,6 @@ import javax.swing.*
 
 class D2PreviewPanel(
     private val project: Project,
-    private val file: VirtualFile,
     private val editor: Editor
 ) : Disposable {
 
@@ -52,8 +51,8 @@ class D2PreviewPanel(
     private val debounceDelay = 1000 // milliseconds
 
     // Preview renderers
-    private val svgRenderer = SvgPreviewRenderer(project)
-    private val gifRenderer = GifPreviewRenderer(project)
+    private val svgRenderer = SvgPreviewRenderer()
+    private val pngRenderer = PngPreviewRenderer()
     private var currentRenderer: PreviewRenderer = svgRenderer
 
     // Radio buttons for renderer selection
@@ -86,9 +85,18 @@ class D2PreviewPanel(
     }
 
     init {
-        project.messageBus.connect(this).subscribe(
+        val connection = project.messageBus.connect(this)
+        connection.subscribe(
             FileDocumentManagerListener.TOPIC,
             fileSaveListener
+        )
+        connection.subscribe(
+            D2SettingsState.SETTINGS_CHANGED_TOPIC,
+            object : D2SettingsState.SettingsChangeListener {
+                override fun settingsChanged() {
+                    updatePreview()
+                }
+            }
         )
         refreshButton.addActionListener {
             updatePreview()
@@ -102,7 +110,7 @@ class D2PreviewPanel(
             currentRenderer.zoomOut()
         }
 
-        moreActionsButton.addActionListener { event ->
+        moreActionsButton.addActionListener {
             val popupMenu = JBPopupMenu()
 
             val exportMenuItem = JMenuItem("Export", AllIcons.ToolbarDecorator.Export)
@@ -130,7 +138,7 @@ class D2PreviewPanel(
         }
 
         pngRadioButton.addActionListener {
-            switchRenderer(gifRenderer)
+            switchRenderer(pngRenderer)
         }
 
         // Setup top toolbar with zoom and export buttons
@@ -305,7 +313,7 @@ class D2PreviewPanel(
 
                     // Open with system default application (Preview on macOS)
                     val osName = System.getProperty("os.name").lowercase()
-                    val process = when {
+                    when {
                         osName.contains("mac") -> {
                             ProcessBuilder("open", exportFile.absolutePath).start()
                         }
@@ -335,7 +343,7 @@ class D2PreviewPanel(
     override fun dispose() {
         alarm.cancelAllRequests()
         svgRenderer.dispose()
-        gifRenderer.dispose()
+        pngRenderer.dispose()
         tempOutputFile?.delete()
         tempSourceFile?.delete()
     }

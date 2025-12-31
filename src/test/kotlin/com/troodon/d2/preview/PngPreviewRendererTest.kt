@@ -1,20 +1,17 @@
 package com.troodon.d2.preview
 
-import com.intellij.openapi.project.Project
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import org.junit.Test
 import java.awt.image.BufferedImage
-import java.io.File
 import javax.imageio.ImageIO
-import kotlin.test.assertNotNull
 
-class GifPreviewRendererTest : BasePlatformTestCase() {
+class PngPreviewRendererTest : BasePlatformTestCase() {
 
-    private lateinit var renderer: GifPreviewRenderer
+    private lateinit var renderer: PngPreviewRenderer
 
     override fun setUp() {
         super.setUp()
-        renderer = GifPreviewRenderer(project)
+        renderer = PngPreviewRenderer()
     }
 
     override fun tearDown() {

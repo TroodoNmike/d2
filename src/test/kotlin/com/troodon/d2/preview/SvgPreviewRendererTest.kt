@@ -16,7 +16,7 @@ class SvgPreviewRendererTest : BasePlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
-        renderer = SvgPreviewRenderer(project)
+        renderer = SvgPreviewRenderer()
     }
 
     override fun tearDown() {

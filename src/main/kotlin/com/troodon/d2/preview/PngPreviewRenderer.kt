@@ -1,8 +1,6 @@
 package com.troodon.d2.preview
 
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.project.Project
 import com.intellij.ui.components.JBScrollPane
 import java.awt.BorderLayout
 import java.awt.Cursor
@@ -15,9 +13,8 @@ import java.io.File
 import javax.imageio.ImageIO
 import javax.swing.*
 
-class GifPreviewRenderer(private val project: Project) : PreviewRenderer {
+class PngPreviewRenderer : PreviewRenderer {
 
-    private val LOG = Logger.getInstance(GifPreviewRenderer::class.java)
     private val imageLabel = JLabel()
     private val scrollPane = JBScrollPane(imageLabel)
     private val panel = JPanel(BorderLayout())
@@ -46,11 +43,25 @@ class GifPreviewRenderer(private val project: Project) : PreviewRenderer {
                 val image = ImageIO.read(outputFile)
                 if (image != null) {
                     imageLabel.text = null
+
+                    // Save scroll position before updating
+                    val viewport = scrollPane.viewport
+                    val savedScrollX = viewport.viewPosition.x
+                    val savedScrollY = viewport.viewPosition.y
+
                     originalImage = image
 
-                    // Calculate fit to screen zoom
-                    zoomLevel = calculateFitToScreenZoom(image)
+                    // Only calculate fit to screen zoom if this is the first render (zoomLevel == 1.0)
+                    if (zoomLevel == 1.0) {
+                        zoomLevel = calculateFitToScreenZoom(image)
+                    }
+
                     updateZoom()
+
+                    // Restore scroll position after a short delay
+                    SwingUtilities.invokeLater {
+                        viewport.viewPosition = Point(savedScrollX, savedScrollY)
+                    }
                 } else {
                     showError("Failed to load image")
                 }

@@ -48,7 +48,6 @@ class D2PreviewPanel(
     private val autoRefreshCheckBox = JCheckBox("Auto-refresh", true)
     private val autoFormatCheckBox = JCheckBox("Auto-format (d2 fmt)", false)
     private val alarm = Alarm(Alarm.ThreadToUse.POOLED_THREAD, this)
-    private val debounceDelay = 1000 // milliseconds
 
     // Preview renderers
     private val svgRenderer = SvgPreviewRenderer()
@@ -71,6 +70,7 @@ class D2PreviewPanel(
         override fun documentChanged(event: DocumentEvent) {
             if (autoRefreshCheckBox.isSelected && !isFormatting) {
                 alarm.cancelAllRequests()
+                val debounceDelay = D2SettingsState.getInstance(project).debounceDelay
                 alarm.addRequest({ updatePreview() }, debounceDelay)
             }
         }

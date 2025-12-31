@@ -36,8 +36,12 @@ intellijPlatform {
         changeNotes = """
             <h3>Version 1.0.3</h3>
             <ul>
-                <li>Added preview mode toggle (PNG or SVG/HTML) directly in the preview toolbar.</li>
-                <li>Export now respects the active preview mode (exports .png or .svg accordingly).</li>
+                <li>Added live SVG preview support for rendering D2 diagrams with compositions.</li>
+                <li>Added a preview mode toggle (PNG or SVG/HTML) to the preview toolbar.</li>
+                <li>Export now matches the active preview mode (.png or .svg).</li>
+                <li>Changing D2 settings now automatically re-renders the preview.</li>
+                <li>Added <code>--animate-interval=1000</code> to support multi-step diagrams (layers/scenarios/steps).</li>
+                <li>Added a configurable auto-refresh debounce delay in D2 settings.</li>
             </ul>
         """.trimIndent()
     }

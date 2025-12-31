@@ -28,6 +28,14 @@ class D2SettingsPanel(private val project: Project) {
         isFocusPainted = false
         isContentAreaFilled = false
     }
+    private val debounceDelayField = JBTextField()
+    private val resetDebounceButton = JButton(AllIcons.Actions.Rollback).apply {
+        toolTipText = "Reset to default value"
+        preferredSize = java.awt.Dimension(24, 24)
+        isBorderPainted = false
+        isFocusPainted = false
+        isContentAreaFilled = false
+    }
     private val versionLabel = JBLabel()
     private val statusLabel = JBLabel()
     private val refreshButton = JButton("Validate")
@@ -51,10 +59,15 @@ class D2SettingsPanel(private val project: Project) {
             d2ArgumentsField.text = DEFAULT_D2_ARGUMENTS
         }
 
+        resetDebounceButton.addActionListener {
+            debounceDelayField.text = DEFAULT_DEBOUNCE_DELAY.toString()
+        }
+
         // Load current setting
         val settings = D2SettingsState.getInstance(project)
         d2PathField.text = settings.d2CliPath
         d2ArgumentsField.text = settings.d2Arguments
+        debounceDelayField.text = settings.debounceDelay.toString()
 
         updateVersion()
 
@@ -67,10 +80,17 @@ class D2SettingsPanel(private val project: Project) {
         argumentsPanel.add(d2ArgumentsField, BorderLayout.CENTER)
         argumentsPanel.add(resetArgumentsButton, BorderLayout.EAST)
 
+        // Create a panel for debounceDelay field with reset button
+        val debouncePanel = JPanel(BorderLayout(5, 0))
+        debouncePanel.add(debounceDelayField, BorderLayout.CENTER)
+        debouncePanel.add(resetDebounceButton, BorderLayout.EAST)
+
         val panel = FormBuilder.createFormBuilder()
             .addLabeledComponent("D2 CLI Path:", d2PathField)
             .addLabeledComponent("D2 Arguments:", argumentsPanel)
             .addTooltip("Additional arguments to pass to d2 command (e.g., --sketch, --theme=200 --animate-interval=1000)")
+            .addLabeledComponent("Auto-refresh", debouncePanel)
+            .addTooltip("Delay in milliseconds before auto-refreshing the preview after typing")
             .addLabeledComponent("D2 CLI Status:", statusPanel)
             .addLabeledComponent("D2 Version:", versionLabel)
             .addComponentFillVertically(JPanel(), 0)
@@ -91,13 +111,16 @@ class D2SettingsPanel(private val project: Project) {
 
     fun isModified(): Boolean {
         val settings = D2SettingsState.getInstance(project)
-        return d2PathField.text != settings.d2CliPath || d2ArgumentsField.text != settings.d2Arguments
+        return d2PathField.text != settings.d2CliPath ||
+               d2ArgumentsField.text != settings.d2Arguments ||
+               debounceDelayField.text.toIntOrNull() != settings.debounceDelay
     }
 
     fun apply() {
         val settings = D2SettingsState.getInstance(project)
         settings.d2CliPath = d2PathField.text
         settings.d2Arguments = d2ArgumentsField.text.trim()
+        settings.debounceDelay = debounceDelayField.text.toIntOrNull() ?: DEFAULT_DEBOUNCE_DELAY
         updateVersion()
     }
 
@@ -105,6 +128,7 @@ class D2SettingsPanel(private val project: Project) {
         val settings = D2SettingsState.getInstance(project)
         d2PathField.text = settings.d2CliPath
         d2ArgumentsField.text = settings.d2Arguments
+        debounceDelayField.text = settings.debounceDelay.toString()
         updateVersion()
     }
 

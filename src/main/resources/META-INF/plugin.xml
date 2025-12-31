@@ -21,10 +21,14 @@
             <li><strong>Syntax Highlighting</strong> - Color-coded syntax for D2 diagram files</li>
             <li><strong>Live Preview</strong> - Real-time diagram rendering with auto-refresh</li>
             <li><strong>Split Editor</strong> - Edit D2 code and preview side-by-side</li>
-            <li><strong>Auto-format</strong> - Optional automatic code formatting using d2 fmt</li>
-            <li><strong>Interactive Preview</strong> - Zoom, pan, and export diagrams as PNG</li>
+            <li><strong>Preview Modes</strong> - Toggle rendering between SVG (HTML) and PNG</li>
+            <li><strong>Interactive Preview</strong> - Pan/drag to move and zoom controls</li>
+            <li><strong>Export</strong> - Export matches the active preview mode (.svg or .png)</li>
+            <li><strong>Auto-format</strong> - Optional automatic code formatting using <code>d2 fmt</code></li>
+            <li><strong>Configurable Auto-refresh Delay</strong> - Adjust debounce delay for auto-refresh</li>
             <li><strong>Code Editing</strong> - Brace matching, commenting, and code style settings</li>
-            <li><strong>Configurable CLI Path</strong> - Custom D2 CLI executable location</li>
+            <li><strong>File Type Icon</strong> - Custom icon for <code>.d2</code> files</li>
+            <li><strong>Configurable D2 CLI</strong> - Set executable path and additional CLI arguments</li>
         </ul>
 
         <h3>Requirements</h3>
@@ -38,23 +42,6 @@
             <li>Start creating diagrams with live preview!</li>
         </ol>
     ]]></description>
-
-    <!-- What's new in this version -->
-    <change-notes><![CDATA[
-        <h3>Version 1.0.0</h3>
-        <ul>
-            <li>Initial release</li>
-            <li>D2 language syntax highlighting</li>
-            <li>Live preview with auto-refresh</li>
-            <li>Split editor mode (code + preview)</li>
-            <li>Zoom and pan controls for diagrams</li>
-            <li>Export diagrams to PNG</li>
-            <li>Auto-format with d2 fmt</li>
-            <li>Configurable D2 CLI path</li>
-            <li>Brace matching and code commenting</li>
-            <li>Color settings customization</li>
-        </ul>
-    ]]></change-notes>
 
     <!-- Product and plugin compatibility requirements.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->

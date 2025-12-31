@@ -5,14 +5,19 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.project.Project
+import com.intellij.util.messages.Topic
 import com.intellij.util.xmlb.XmlSerializerUtil
+
+const val DEFAULT_D2_ARGUMENTS = "--animate-interval=1000"
+const val DEFAULT_DEBOUNCE_DELAY = 1000
 
 @Service(Service.Level.PROJECT)
 @State(name = "D2Settings", storages = [Storage("d2Settings.xml")])
 class D2SettingsState : PersistentStateComponent<D2SettingsState> {
 
     var d2CliPath: String = "" // Empty by default - will auto-detect from common paths
-    var d2Arguments: String = "" // Additional arguments to pass to d2 command (e.g., --sketch)
+    var d2Arguments: String = DEFAULT_D2_ARGUMENTS // Additional arguments to pass to d2 command (e.g., --sketch)
+    var debounceDelay: Int = DEFAULT_DEBOUNCE_DELAY // Auto-refresh delay in milliseconds
 
     /**
      * Gets the effective D2 CLI path to use for execution.
@@ -44,5 +49,14 @@ class D2SettingsState : PersistentStateComponent<D2SettingsState> {
         fun getInstance(project: Project): D2SettingsState {
             return project.getService(D2SettingsState::class.java)
         }
+
+        val SETTINGS_CHANGED_TOPIC: Topic<SettingsChangeListener> = Topic.create(
+            "D2 Settings Changed",
+            SettingsChangeListener::class.java
+        )
+    }
+
+    interface SettingsChangeListener {
+        fun settingsChanged()
     }
 }

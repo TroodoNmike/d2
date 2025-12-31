@@ -20,7 +20,7 @@ class D2SplitEditorProvider : FileEditorProvider, DumbAware {
 
     override fun createEditor(project: Project, file: VirtualFile): FileEditor {
         val textEditor = TextEditorProvider.getInstance().createEditor(project, file) as TextEditor
-        val previewPanel = D2PreviewPanel(project, file, textEditor.editor)
+        val previewPanel = D2PreviewPanel(project, textEditor.editor)
         
         return object : TextEditorWithPreview(
             textEditor,

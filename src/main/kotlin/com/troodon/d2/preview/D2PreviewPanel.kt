@@ -7,60 +7,62 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
-import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileDocumentManagerListener
+import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.JBPopupMenu
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.Alarm
 import com.intellij.util.ui.JBUI
+import com.troodon.d2.settings.D2SettingsConfigurable
 import com.troodon.d2.settings.D2SettingsState
 import java.awt.BorderLayout
-import java.awt.Cursor
 import java.awt.FlowLayout
-import java.awt.Image
-import java.awt.Point
-import java.awt.event.MouseAdapter
-import java.awt.event.MouseEvent
-import java.awt.event.MouseWheelEvent
 import java.io.File
-import javax.imageio.ImageIO
 import javax.swing.*
 
 class D2PreviewPanel(
     private val project: Project,
-    private val file: VirtualFile,
     private val editor: Editor
 ) : Disposable {
 
     private val LOG = Logger.getInstance(D2PreviewPanel::class.java)
     private val panel = JPanel(BorderLayout())
-    private val imageLabel = JLabel()
-    private val scrollPane = JBScrollPane(imageLabel)
-    private val statusLabel = JLabel(" ")
-    private val imageTypeLabel = JLabel("")
+    private val statusLabel = JLabel("<html> </html>")
     private val refreshButton = JButton("Refresh", AllIcons.Actions.Refresh)
     private val zoomInButton = JButton("Zoom In", AllIcons.General.ZoomIn)
     private val zoomOutButton = JButton("Zoom Out", AllIcons.General.ZoomOut)
-    private val exportButton = JButton("Export", AllIcons.ToolbarDecorator.Export)
+    private val moreActionsButton = JButton(AllIcons.Actions.More).apply {
+        // Make it icon-only and compact
+        text = null
+        toolTipText = "More actions"
+        preferredSize = java.awt.Dimension(24, 24)
+        minimumSize = java.awt.Dimension(24, 24)
+        maximumSize = java.awt.Dimension(24, 24)
+        isBorderPainted = false
+        isFocusPainted = false
+        isContentAreaFilled = false
+        cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
+    }
     private val autoRefreshCheckBox = JCheckBox("Auto-refresh", true)
     private val autoFormatCheckBox = JCheckBox("Auto-format (d2 fmt)", false)
     private val alarm = Alarm(Alarm.ThreadToUse.POOLED_THREAD, this)
-    private val debounceDelay = 1000 // milliseconds
-    
+
+    // Preview renderers
+    private val svgRenderer = SvgPreviewRenderer()
+    private val pngRenderer = PngPreviewRenderer()
+    private var currentRenderer: PreviewRenderer = svgRenderer
+
+    // Radio buttons for renderer selection
+    private val svgRadioButton = JRadioButton("SVG", true)
+    private val pngRadioButton = JRadioButton("PNG", false)
+
     private var tempOutputFile: File? = null
     private var tempSourceFile: File? = null
-    private var originalImage: Image? = null
-    private var zoomLevel = 1.0
-    private val zoomStep = 0.1
-    private val minZoom = 0.1
-    private val maxZoom = 5.0
-    private var isFirstRender = true
     private var isFormatting = false
 
-    // For dragging
-    private var dragStart: Point? = null
+    private val contentPanel = JPanel(BorderLayout())
 
     val component: JComponent get() = panel
 
@@ -68,6 +70,7 @@ class D2PreviewPanel(
         override fun documentChanged(event: DocumentEvent) {
             if (autoRefreshCheckBox.isSelected && !isFormatting) {
                 alarm.cancelAllRequests()
+                val debounceDelay = D2SettingsState.getInstance(project).debounceDelay
                 alarm.addRequest({ updatePreview() }, debounceDelay)
             }
         }
@@ -82,28 +85,60 @@ class D2PreviewPanel(
     }
 
     init {
-        // Register file save listener
-        project.messageBus.connect(this).subscribe(
+        val connection = project.messageBus.connect(this)
+        connection.subscribe(
             FileDocumentManagerListener.TOPIC,
             fileSaveListener
         )
-        // Setup buttons
+        connection.subscribe(
+            D2SettingsState.SETTINGS_CHANGED_TOPIC,
+            object : D2SettingsState.SettingsChangeListener {
+                override fun settingsChanged() {
+                    updatePreview()
+                }
+            }
+        )
         refreshButton.addActionListener {
             updatePreview()
         }
         
         zoomInButton.addActionListener {
-            zoomIn()
-            updateZoomDisplay()
+            currentRenderer.zoomIn()
         }
-        
+
         zoomOutButton.addActionListener {
-            zoomOut()
-            updateZoomDisplay()
+            currentRenderer.zoomOut()
         }
-        
-        exportButton.addActionListener {
-            exportToPreview()
+
+        moreActionsButton.addActionListener {
+            val popupMenu = JBPopupMenu()
+
+            val exportMenuItem = JMenuItem("Export", AllIcons.ToolbarDecorator.Export)
+            exportMenuItem.addActionListener {
+                exportToPreview()
+            }
+            popupMenu.add(exportMenuItem)
+
+            val settingsMenuItem = JMenuItem("Settings", AllIcons.General.Settings)
+            settingsMenuItem.addActionListener {
+                ShowSettingsUtil.getInstance().showSettingsDialog(project, D2SettingsConfigurable::class.java)
+            }
+            popupMenu.add(settingsMenuItem)
+
+            popupMenu.show(moreActionsButton, 0, moreActionsButton.height)
+        }
+
+        // Setup radio buttons
+        val buttonGroup = ButtonGroup()
+        buttonGroup.add(svgRadioButton)
+        buttonGroup.add(pngRadioButton)
+
+        svgRadioButton.addActionListener {
+            switchRenderer(svgRenderer)
+        }
+
+        pngRadioButton.addActionListener {
+            switchRenderer(pngRenderer)
         }
 
         // Setup top toolbar with zoom and export buttons
@@ -117,9 +152,11 @@ class D2PreviewPanel(
         tipPanel.add(tipLabel, BorderLayout.CENTER)
 
         val topButtonPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 5, 0))
-        topButtonPanel.add(exportButton)
+        topButtonPanel.add(pngRadioButton)
+        topButtonPanel.add(svgRadioButton)
         topButtonPanel.add(zoomOutButton)
         topButtonPanel.add(zoomInButton)
+        topButtonPanel.add(moreActionsButton)
 
         topToolbar.add(tipPanel, BorderLayout.CENTER)
         topToolbar.add(topButtonPanel, BorderLayout.EAST)
@@ -128,129 +165,54 @@ class D2PreviewPanel(
         val statusPanel = JPanel(BorderLayout())
         statusPanel.border = JBUI.Borders.empty(2, 5)
         statusLabel.font = statusLabel.font.deriveFont(11f)
-        imageTypeLabel.font = imageTypeLabel.font.deriveFont(11f)
+        statusLabel.verticalAlignment = JLabel.TOP
 
-        val leftPanel = JPanel()
-        leftPanel.layout = BoxLayout(leftPanel, BoxLayout.Y_AXIS)
-        leftPanel.add(statusLabel)
-        leftPanel.add(imageTypeLabel)
+        // Wrap statusLabel in a panel to constrain width
+        val statusLabelPanel = JPanel(BorderLayout())
+        statusLabelPanel.add(statusLabel, BorderLayout.CENTER)
 
         val bottomButtonPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 5, 0))
         bottomButtonPanel.add(autoFormatCheckBox)
         bottomButtonPanel.add(autoRefreshCheckBox)
         bottomButtonPanel.add(refreshButton)
 
-        statusPanel.add(leftPanel, BorderLayout.WEST)
+        statusPanel.add(statusLabelPanel, BorderLayout.CENTER)
         statusPanel.add(bottomButtonPanel, BorderLayout.EAST)
 
         panel.add(topToolbar, BorderLayout.NORTH)
-        panel.add(scrollPane, BorderLayout.CENTER)
+
+        // Initialize with current renderer
+        contentPanel.add(currentRenderer.getComponent(), BorderLayout.CENTER)
+        panel.add(contentPanel, BorderLayout.CENTER)
+
         panel.add(statusPanel, BorderLayout.SOUTH)
-        imageLabel.horizontalAlignment = JLabel.CENTER
-        imageLabel.verticalAlignment = JLabel.CENTER
         panel.border = JBUI.Borders.empty(10)
-        
-        setupZoomAndDrag()
+
         updatePreview() // Initial render
     }
     
-    private fun setupZoomAndDrag() {
-        // Mouse wheel zoom
-        scrollPane.addMouseWheelListener { e: MouseWheelEvent ->
-            if (e.isControlDown || e.isMetaDown) {
-                e.consume()
-                if (e.wheelRotation < 0) {
-                    zoomIn()
-                } else {
-                    zoomOut()
-                }
-            }
+    private fun switchRenderer(newRenderer: PreviewRenderer) {
+        if (currentRenderer != newRenderer) {
+            contentPanel.removeAll()
+            currentRenderer = newRenderer
+            contentPanel.add(currentRenderer.getComponent(), BorderLayout.CENTER)
+            contentPanel.revalidate()
+            contentPanel.repaint()
+            updatePreview()
         }
-        
-        // Drag to pan
-        val mouseAdapter = object : MouseAdapter() {
-            override fun mousePressed(e: MouseEvent) {
-                if (SwingUtilities.isLeftMouseButton(e)) {
-                    dragStart = Point(e.x, e.y)
-                    scrollPane.cursor = Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR)
-                }
-            }
-            
-            override fun mouseReleased(e: MouseEvent) {
-                dragStart = null
-                scrollPane.cursor = Cursor.getDefaultCursor()
-            }
-            
-            override fun mouseDragged(e: MouseEvent) {
-                dragStart?.let { start ->
-                    val viewport = scrollPane.viewport
-                    val viewPosition = viewport.viewPosition
-                    
-                    val deltaX = start.x - e.x
-                    val deltaY = start.y - e.y
-                    
-                    viewPosition.translate(deltaX, deltaY)
-                    
-                    imageLabel.scrollRectToVisible(
-                        java.awt.Rectangle(viewPosition, viewport.size)
-                    )
-                    
-                    dragStart = Point(e.x, e.y)
-                }
-            }
-        }
-        
-        scrollPane.addMouseListener(mouseAdapter)
-        scrollPane.addMouseMotionListener(mouseAdapter)
-        imageLabel.addMouseListener(mouseAdapter)
-        imageLabel.addMouseMotionListener(mouseAdapter)
-    }
-    
-    private fun zoomIn() {
-        if (zoomLevel < maxZoom) {
-            zoomLevel = (zoomLevel + zoomStep).coerceAtMost(maxZoom)
-            updateZoom()
-            updateZoomDisplay()
-        }
-    }
-    
-    private fun zoomOut() {
-        if (zoomLevel > minZoom) {
-            zoomLevel = (zoomLevel - zoomStep).coerceAtLeast(minZoom)
-            updateZoom()
-            updateZoomDisplay()
-        }
-    }
-    
-    private fun updateZoom() {
-        originalImage?.let { img ->
-            val width = (img.getWidth(null) * zoomLevel).toInt()
-            val height = (img.getHeight(null) * zoomLevel).toInt()
-            val scaledImage = img.getScaledInstance(width, height, Image.SCALE_SMOOTH)
-            imageLabel.icon = ImageIcon(scaledImage)
-        }
-    }
-    
-    private fun updateZoomDisplay() {
-        val zoomPercent = (zoomLevel * 100).toInt()
-        imageTypeLabel.text = "PNG | Zoom: $zoomPercent%"
     }
 
     private fun updatePreview() {
         refreshButton.isEnabled = false
         showStatus("Rendering...")
-        
-        // Save current scroll position and zoom (only if not first render)
-        val savedScrollPosition = if (isFirstRender) null else scrollPane.viewport.viewPosition
-        val savedZoom = if (isFirstRender) null else zoomLevel
-        
+
         Thread {
             try {
                 // Get content from editor (unsaved changes)
                 val editorContent = ApplicationManager.getApplication().runReadAction<String> {
                     editor.document.text
                 }
-                
+
                 // Write editor content to a temp source file
                 tempSourceFile?.delete()
                 tempSourceFile = FileUtil.createTempFile("d2-source", ".d2", true)
@@ -279,14 +241,20 @@ class D2PreviewPanel(
                     }
                 }
 
-                // Create temp output PNG file directly
+                // Create temp output file based on current renderer
                 tempOutputFile?.delete()
-                tempOutputFile = FileUtil.createTempFile("d2-preview", ".png", true)
+                val extension = currentRenderer.getFileExtension()
+                tempOutputFile = FileUtil.createTempFile("d2-preview", extension, true)
 
-                // Execute d2 CLI to generate PNG directly from source
+                // Execute d2 CLI to generate output file
                 val settings = D2SettingsState.getInstance(project)
                 val d2Path = settings.getEffectiveD2Path()
-                val d2Arguments = settings.d2Arguments
+                var d2Arguments = settings.d2Arguments
+
+                // Exclude --animate-interval when using PNG renderer
+                if (currentRenderer is PngPreviewRenderer) {
+                    d2Arguments = d2Arguments.replace(Regex("--animate-interval=\\d+"), "").trim()
+                }
 
                 // Build command with arguments
                 val command = mutableListOf(d2Path)
@@ -300,44 +268,14 @@ class D2PreviewPanel(
                 val process = ProcessBuilder(command).redirectErrorStream(true).start()
 
                 val exitCode = process.waitFor()
-                
+
                 if (exitCode == 0 && tempOutputFile!!.exists()) {
-                    // Load and display the PNG
-                    val image = ImageIO.read(tempOutputFile)
-                    if (image != null) {
-                        ApplicationManager.getApplication().invokeLater {
-                            // Clear any previous error text
-                            imageLabel.text = null
-                            
-                            originalImage = image
-                            
-                            if (isFirstRender) {
-                                // First render: calculate zoom to fit
-                                zoomLevel = calculateFitToScreenZoom(image)
-                                isFirstRender = false
-                            } else {
-                                // Subsequent renders: restore saved zoom
-                                zoomLevel = savedZoom ?: 1.0
-                            }
-                            
-                            updateZoom()
-                            
-                            // Restore scroll position after a brief delay to ensure layout is complete
-                            if (savedScrollPosition != null) {
-                                SwingUtilities.invokeLater {
-                                    scrollPane.viewport.viewPosition = savedScrollPosition
-                                }
-                            }
-                            
-                            showStatus("Updated at ${java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"))}")
-                            updateZoomDisplay()
-                            refreshButton.isEnabled = true
-                        }
-                    } else {
-                        showError("Failed to load image")
-                        ApplicationManager.getApplication().invokeLater {
-                            refreshButton.isEnabled = true
-                        }
+                    // Use the current renderer to display the output
+                    currentRenderer.render(tempSourceFile!!, tempOutputFile!!)
+
+                    ApplicationManager.getApplication().invokeLater {
+                        showStatus("Updated at ${java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"))}")
+                        refreshButton.isEnabled = true
                     }
                 } else {
                     val error = process.inputStream.bufferedReader().readText()
@@ -355,54 +293,32 @@ class D2PreviewPanel(
             }
         }.start()
     }
-    
-    private fun calculateFitToScreenZoom(image: Image): Double {
-        val imageWidth = image.getWidth(null)
-        val imageHeight = image.getHeight(null)
-        
-        val viewportWidth = scrollPane.viewport.width
-        val viewportHeight = scrollPane.viewport.height
-        
-        // Add some padding (90% of viewport)
-        val maxWidth = viewportWidth * 0.9
-        val maxHeight = viewportHeight * 0.9
-        
-        if (imageWidth <= 0 || imageHeight <= 0 || viewportWidth <= 0 || viewportHeight <= 0) {
-            return 1.0
-        }
-        
-        val widthScale = maxWidth / imageWidth
-        val heightScale = maxHeight / imageHeight
-        
-        // Use the smaller scale to ensure the entire image fits
-        return minOf(widthScale, heightScale, 1.0).coerceAtLeast(minZoom)
-    }
 
     private fun showError(message: String) {
         ApplicationManager.getApplication().invokeLater {
-            imageLabel.icon = null
-            imageLabel.text = "<html><body style='color: red;'>$message</body></html>"
-            statusLabel.text = "Error"
+            statusLabel.text = "<html>Error: $message</html>"
+            LOG.warn("Preview error: $message")
         }
     }
 
     private fun showStatus(message: String) {
         ApplicationManager.getApplication().invokeLater {
-            statusLabel.text = message
+            statusLabel.text = "<html>$message</html>"
         }
     }
     
     private fun exportToPreview() {
-        tempOutputFile?.let { pngFile ->
-            if (pngFile.exists()) {
+        tempOutputFile?.let { outputFile ->
+            if (outputFile.exists()) {
                 try {
+                    val extension = currentRenderer.getFileExtension()
                     // Create a persistent export file in user's temp directory
-                    val exportFile = File(System.getProperty("java.io.tmpdir"), "d2-export-${System.currentTimeMillis()}.png")
-                    pngFile.copyTo(exportFile, overwrite = true)
-                    
+                    val exportFile = File(System.getProperty("java.io.tmpdir"), "d2-export-${System.currentTimeMillis()}$extension")
+                    outputFile.copyTo(exportFile, overwrite = true)
+
                     // Open with system default application (Preview on macOS)
                     val osName = System.getProperty("os.name").lowercase()
-                    val process = when {
+                    when {
                         osName.contains("mac") -> {
                             ProcessBuilder("open", exportFile.absolutePath).start()
                         }
@@ -417,7 +333,7 @@ class D2PreviewPanel(
                             return
                         }
                     }
-                    
+
                     showStatus("Exported to ${exportFile.name}")
                 } catch (e: Exception) {
                     LOG.warn("Failed to export preview", e)
@@ -431,6 +347,8 @@ class D2PreviewPanel(
 
     override fun dispose() {
         alarm.cancelAllRequests()
+        svgRenderer.dispose()
+        pngRenderer.dispose()
         tempOutputFile?.delete()
         tempSourceFile?.delete()
     }

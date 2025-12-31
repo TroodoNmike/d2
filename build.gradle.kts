@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.troodon.d2"
-version = "1.0.2"
+version = "1.0.3"
 
 repositories {
     mavenCentral()
@@ -34,18 +34,14 @@ intellijPlatform {
         }
 
         changeNotes = """
-            <h3>Version 1.0.2</h3>
+            <h3>Version 1.0.3</h3>
             <ul>
-                <li>Initial release</li>
-                <li>D2 language syntax highlighting</li>
-                <li>Live preview with auto-refresh</li>
-                <li>Split editor mode (code + preview)</li>
-                <li>Zoom and pan controls for diagrams</li>
-                <li>Export diagrams to PNG</li>
-                <li>Auto-format with d2 fmt</li>
-                <li>Configurable D2 CLI path</li>
-                <li>Brace matching and code commenting</li>
-                <li>Color settings customization</li>
+                <li>Added live SVG preview support for rendering D2 diagrams with compositions.</li>
+                <li>Added a preview mode toggle (PNG or SVG/HTML) to the preview toolbar.</li>
+                <li>Export now matches the active preview mode (.png or .svg).</li>
+                <li>Changing D2 settings now automatically re-renders the preview.</li>
+                <li>Added <code>--animate-interval=1000</code> to support multi-step diagrams (layers/scenarios/steps).</li>
+                <li>Added a configurable auto-refresh debounce delay in D2 settings.</li>
             </ul>
         """.trimIndent()
     }

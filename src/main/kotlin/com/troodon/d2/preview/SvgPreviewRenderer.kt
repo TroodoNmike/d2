@@ -5,6 +5,9 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.ui.jcef.JBCefApp
 import com.intellij.ui.jcef.JBCefBrowser
+import org.cef.browser.CefBrowser
+import org.cef.browser.CefFrame
+import org.cef.handler.CefLoadHandlerAdapter
 import java.awt.BorderLayout
 import java.io.File
 import java.nio.file.Files
@@ -25,11 +28,87 @@ class SvgPreviewRenderer(private val project: Project) : PreviewRenderer {
     private val minZoom = 0.1
     private val maxZoom = 5.0
 
+    @Volatile
+    private var isBrowserReady = false
+    private var pendingRenderTask: (() -> Unit)? = null
+
     init {
         if (browser != null) {
             panel.add(browser.component, BorderLayout.CENTER)
             LOG.info("JCEF browser initialized successfully")
-            browser.loadHTML("<html><body><h1>D2 Preview Loading...</h1></body></html>")
+
+            // Add load handler to detect when browser is ready
+            browser.jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
+                override fun onLoadEnd(cefBrowser: CefBrowser?, frame: CefFrame?, httpStatusCode: Int) {
+                    if (frame?.isMain == true) {
+                        LOG.info("JCEF browser ready (httpStatusCode: $httpStatusCode)")
+                        isBrowserReady = true
+
+                        // Execute pending render if any
+                        pendingRenderTask?.let { task ->
+                            ApplicationManager.getApplication().invokeLater {
+                                task()
+                                pendingRenderTask = null
+                            }
+                        }
+                    }
+                }
+            }, browser.cefBrowser)
+
+            browser.loadHTML("""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body {
+                            margin: 0;
+                            padding: 0;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            height: 100vh;
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                            background: #f5f5f5;
+                        }
+                        .loader-container {
+                            text-align: center;
+                        }
+                        .spinner {
+                            width: 50px;
+                            height: 50px;
+                            margin: 0 auto 20px;
+                            border: 4px solid #e0e0e0;
+                            border-top: 4px solid #2196F3;
+                            border-radius: 50%;
+                            animation: spin 1s linear infinite;
+                        }
+                        @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                        h2 {
+                            color: #333;
+                            font-weight: 500;
+                            margin: 0;
+                            font-size: 18px;
+                        }
+                        p {
+                            color: #666;
+                            font-size: 14px;
+                            margin: 10px 0 0 0;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="loader-container">
+                        <div class="spinner"></div>
+                        <h2>D2 Preview Loading</h2>
+                        <p>Initializing browser...</p>
+                    </div>
+                </body>
+                </html>
+            """.trimIndent())
         } else {
             val errorLabel = JLabel("<html><center>JCEF browser not supported.<br>SVG preview unavailable.</center></html>")
             errorLabel.horizontalAlignment = JLabel.CENTER
@@ -41,20 +120,21 @@ class SvgPreviewRenderer(private val project: Project) : PreviewRenderer {
     override fun getComponent(): JComponent = panel
 
     override fun render(sourceFile: File, outputFile: File) {
-        ApplicationManager.getApplication().invokeLater {
-            try {
-                if (browser == null) {
-                    LOG.warn("JCEF browser not available")
-                    return@invokeLater
-                }
+        val renderTask = {
+            ApplicationManager.getApplication().invokeLater {
+                try {
+                    if (browser == null) {
+                        LOG.warn("JCEF browser not available")
+                        return@invokeLater
+                    }
 
-                if (!outputFile.exists()) {
-                    LOG.warn("Output file not found: ${outputFile.absolutePath}")
-                    return@invokeLater
-                }
+                    if (!outputFile.exists()) {
+                        LOG.warn("Output file not found: ${outputFile.absolutePath}")
+                        return@invokeLater
+                    }
 
-                // Read SVG content
-                val svgContent = Files.readString(outputFile.toPath())
+                    // Read SVG content
+                    val svgContent = Files.readString(outputFile.toPath())
 
                 // Create HTML wrapper with zoom and pan support
                 val html = """
@@ -189,19 +269,28 @@ class SvgPreviewRenderer(private val project: Project) : PreviewRenderer {
                     </html>
                 """.trimIndent()
 
-                // Load HTML into browser
-                browser.loadHTML(html)
+                    // Load HTML into browser
+                    browser.loadHTML(html)
 
-                // Apply zoom after a short delay to ensure content is loaded
-                SwingUtilities.invokeLater {
-                    Timer(100) { _ -> updateZoom() }.apply {
-                        isRepeats = false
-                        start()
+                    // Apply zoom after a short delay to ensure content is loaded
+                    SwingUtilities.invokeLater {
+                        Timer(100) { _ -> updateZoom() }.apply {
+                            isRepeats = false
+                            start()
+                        }
                     }
+                } catch (e: Exception) {
+                    LOG.error("Failed to load SVG", e)
                 }
-            } catch (e: Exception) {
-                LOG.error("Failed to load SVG", e)
             }
+        }
+
+        // If browser is ready, execute immediately; otherwise, queue for later
+        if (isBrowserReady) {
+            renderTask()
+        } else {
+            LOG.info("Browser not ready yet, queuing render task")
+            pendingRenderTask = renderTask
         }
     }
 

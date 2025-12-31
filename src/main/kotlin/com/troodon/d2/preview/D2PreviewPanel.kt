@@ -8,11 +8,14 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.fileEditor.FileDocumentManagerListener
+import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.JBPopupMenu
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.Alarm
 import com.intellij.util.ui.JBUI
+import com.troodon.d2.settings.D2SettingsConfigurable
 import com.troodon.d2.settings.D2SettingsState
 import java.awt.BorderLayout
 import java.awt.FlowLayout
@@ -27,11 +30,22 @@ class D2PreviewPanel(
 
     private val LOG = Logger.getInstance(D2PreviewPanel::class.java)
     private val panel = JPanel(BorderLayout())
-    private val statusLabel = JLabel(" ")
+    private val statusLabel = JLabel("<html> </html>")
     private val refreshButton = JButton("Refresh", AllIcons.Actions.Refresh)
     private val zoomInButton = JButton("Zoom In", AllIcons.General.ZoomIn)
     private val zoomOutButton = JButton("Zoom Out", AllIcons.General.ZoomOut)
-    private val exportButton = JButton("Export", AllIcons.ToolbarDecorator.Export)
+    private val moreActionsButton = JButton(AllIcons.Actions.More).apply {
+        // Make it icon-only and compact
+        text = null
+        toolTipText = "More actions"
+        preferredSize = java.awt.Dimension(24, 24)
+        minimumSize = java.awt.Dimension(24, 24)
+        maximumSize = java.awt.Dimension(24, 24)
+        isBorderPainted = false
+        isFocusPainted = false
+        isContentAreaFilled = false
+        cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
+    }
     private val autoRefreshCheckBox = JCheckBox("Auto-refresh", true)
     private val autoFormatCheckBox = JCheckBox("Auto-format (d2 fmt)", false)
     private val alarm = Alarm(Alarm.ThreadToUse.POOLED_THREAD, this)
@@ -43,7 +57,7 @@ class D2PreviewPanel(
     private var currentRenderer: PreviewRenderer = svgRenderer
 
     // Radio buttons for renderer selection
-    private val svgRadioButton = JRadioButton("SVG (HTML)", true)
+    private val svgRadioButton = JRadioButton("SVG", true)
     private val pngRadioButton = JRadioButton("PNG", false)
 
     private var tempOutputFile: File? = null
@@ -88,8 +102,22 @@ class D2PreviewPanel(
             currentRenderer.zoomOut()
         }
 
-        exportButton.addActionListener {
-            exportToPreview()
+        moreActionsButton.addActionListener { event ->
+            val popupMenu = JBPopupMenu()
+
+            val exportMenuItem = JMenuItem("Export", AllIcons.ToolbarDecorator.Export)
+            exportMenuItem.addActionListener {
+                exportToPreview()
+            }
+            popupMenu.add(exportMenuItem)
+
+            val settingsMenuItem = JMenuItem("Settings", AllIcons.General.Settings)
+            settingsMenuItem.addActionListener {
+                ShowSettingsUtil.getInstance().showSettingsDialog(project, D2SettingsConfigurable::class.java)
+            }
+            popupMenu.add(settingsMenuItem)
+
+            popupMenu.show(moreActionsButton, 0, moreActionsButton.height)
         }
 
         // Setup radio buttons
@@ -118,9 +146,9 @@ class D2PreviewPanel(
         val topButtonPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 5, 0))
         topButtonPanel.add(pngRadioButton)
         topButtonPanel.add(svgRadioButton)
-        topButtonPanel.add(exportButton)
         topButtonPanel.add(zoomOutButton)
         topButtonPanel.add(zoomInButton)
+        topButtonPanel.add(moreActionsButton)
 
         topToolbar.add(tipPanel, BorderLayout.CENTER)
         topToolbar.add(topButtonPanel, BorderLayout.EAST)
@@ -129,13 +157,18 @@ class D2PreviewPanel(
         val statusPanel = JPanel(BorderLayout())
         statusPanel.border = JBUI.Borders.empty(2, 5)
         statusLabel.font = statusLabel.font.deriveFont(11f)
+        statusLabel.verticalAlignment = JLabel.TOP
+
+        // Wrap statusLabel in a panel to constrain width
+        val statusLabelPanel = JPanel(BorderLayout())
+        statusLabelPanel.add(statusLabel, BorderLayout.CENTER)
 
         val bottomButtonPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 5, 0))
         bottomButtonPanel.add(autoFormatCheckBox)
         bottomButtonPanel.add(autoRefreshCheckBox)
         bottomButtonPanel.add(refreshButton)
 
-        statusPanel.add(statusLabel, BorderLayout.WEST)
+        statusPanel.add(statusLabelPanel, BorderLayout.CENTER)
         statusPanel.add(bottomButtonPanel, BorderLayout.EAST)
 
         panel.add(topToolbar, BorderLayout.NORTH)
@@ -250,14 +283,14 @@ class D2PreviewPanel(
 
     private fun showError(message: String) {
         ApplicationManager.getApplication().invokeLater {
-            statusLabel.text = "Error: $message"
+            statusLabel.text = "<html>Error: $message</html>"
             LOG.warn("Preview error: $message")
         }
     }
 
     private fun showStatus(message: String) {
         ApplicationManager.getApplication().invokeLater {
-            statusLabel.text = message
+            statusLabel.text = "<html>$message</html>"
         }
     }
     

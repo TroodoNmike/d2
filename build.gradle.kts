@@ -5,13 +5,58 @@ plugins {
 }
 
 group = "com.troodon.d2"
-version = "1.0.3"
+version = "1.0.4"
 
 repositories {
     mavenCentral()
     intellijPlatform {
         defaultRepositories()
     }
+}
+
+fun getLatestChangelog(): String {
+    val changelogFile = file("CHANGELOG.md")
+    if (!changelogFile.exists()) {
+        return "No changelog available"
+    }
+
+    val lines = changelogFile.readLines()
+    val changes = mutableListOf<String>()
+    var foundFirstVersion = false
+    var version = ""
+
+    for (line in lines) {
+        if (line.startsWith("## [")) {
+            if (foundFirstVersion) {
+                // Stop at the second version header
+                break
+            }
+            foundFirstVersion = true
+            // Extract version number from ## [1.0.4]
+            version = line.substringAfter("[").substringBefore("]")
+            continue
+        }
+        if (foundFirstVersion && line.isNotBlank()) {
+            // Convert markdown list item to HTML
+            var htmlLine = line.trimStart().removePrefix("- ")
+
+            // Convert markdown code blocks (`text`) to HTML <code>text</code>
+            val parts = htmlLine.split("`")
+            htmlLine = parts.mapIndexed { index, part ->
+                if (index % 2 == 1) "<code>$part</code>" else part
+            }.joinToString("")
+
+            changes.add("<li>$htmlLine</li>")
+        }
+    }
+
+    return """
+        <h3>Version $version</h3>
+        <ul>
+            ${changes.joinToString("\n            ")}
+        </ul>
+        <p><a href="https://github.com/TroodoNmike/d2/blob/main/CHANGELOG.md">See full changelog</a></p>
+    """.trimIndent()
 }
 
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin.html
@@ -33,17 +78,7 @@ intellijPlatform {
             sinceBuild = "243"
         }
 
-        changeNotes = """
-            <h3>Version 1.0.3</h3>
-            <ul>
-                <li>Added live SVG preview support for rendering D2 diagrams with compositions.</li>
-                <li>Added a preview mode toggle (PNG or SVG/HTML) to the preview toolbar.</li>
-                <li>Export now matches the active preview mode (.png or .svg).</li>
-                <li>Changing D2 settings now automatically re-renders the preview.</li>
-                <li>Added <code>--animate-interval=1000</code> to support multi-step diagrams (layers/scenarios/steps).</li>
-                <li>Added a configurable auto-refresh debounce delay in D2 settings.</li>
-            </ul>
-        """.trimIndent()
+        changeNotes = getLatestChangelog()
     }
 }
 

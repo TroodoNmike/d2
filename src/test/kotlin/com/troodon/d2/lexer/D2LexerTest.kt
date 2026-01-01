@@ -369,17 +369,17 @@ class D2LexerTest {
             x <-> y: bidirectional
             a <- b: backward
             c -- d: connection
-            
+
             shape1; shape2; shape3
-            
+
             *.style: {
               fill: blue
             }
         """.trimIndent()
-        
+
         val tokens = tokenize(code)
         val tokenTypes = tokens.map { it.second }.toSet()
-        
+
         assert(tokenTypes.contains("BLOCK_COMMENT"))
         assert(tokenTypes.contains("ARROW_BOTH"))
         assert(tokenTypes.contains("ARROW_LEFT"))
@@ -387,5 +387,42 @@ class D2LexerTest {
         assert(tokenTypes.contains("SEMICOLON"))
         assert(tokenTypes.contains("STAR"))
         assert(tokenTypes.contains("KEYWORD"))
+    }
+
+    @Test
+    fun `test numbers with units as identifiers`() {
+        val tokens = tokenize("expense: 283.56PLN")
+
+        // Should not have any NUMBER tokens, 283.56PLN should be an IDENTIFIER
+        val numberTokens = tokens.filter { it.second == "NUMBER" }
+        assertEquals(0, numberTokens.size)
+
+        val identifiers = tokens.filter { it.second == "IDENTIFIER" }
+        assert(identifiers.any { it.first == "283.56PLN" })
+    }
+
+    @Test
+    fun `test complex value with numbers and operators`() {
+        val tokens = tokenize("expenseElse -> expense: 283.56PLN \\/ 12 = 23.63PLN")
+
+        // Numbers followed by letters should be identifiers
+        val identifiers = tokens.filter { it.second == "IDENTIFIER" }
+        assert(identifiers.any { it.first == "283.56PLN" })
+        assert(identifiers.any { it.first == "23.63PLN" })
+
+        // Plain numbers like 12 should still be recognized as numbers
+        val numberTokens = tokens.filter { it.second == "NUMBER" }
+        assert(numberTokens.any { it.first == "12" })
+    }
+
+    @Test
+    fun `test pure numbers remain as numbers`() {
+        val tokens = tokenize("width: 100\nopacity: 0.75\ntop: -5")
+
+        val numberTokens = tokens.filter { it.second == "NUMBER" }
+        assertEquals(3, numberTokens.size)
+        assert(numberTokens.any { it.first == "100" })
+        assert(numberTokens.any { it.first == "0.75" })
+        assert(numberTokens.any { it.first == "-5" })
     }
 }

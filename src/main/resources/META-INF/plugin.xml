@@ -18,9 +18,9 @@
 
         <h3>Features</h3>
         <ul>
-            <li><strong>Syntax Highlighting</strong> - Color-coded syntax for D2 diagram files</li>
             <li><strong>Live Preview</strong> - Real-time diagram rendering with auto-refresh</li>
             <li><strong>Split Editor</strong> - Edit D2 code and preview side-by-side</li>
+            <li><strong>Syntax Highlighting</strong> - Color-coded syntax for D2 diagram files</li>
             <li><strong>Preview Modes</strong> - Toggle rendering between SVG (HTML) and PNG</li>
             <li><strong>Interactive Preview</strong> - Pan/drag to move and zoom controls</li>
             <li><strong>Export</strong> - Export matches the active preview mode (.svg or .png)</li>

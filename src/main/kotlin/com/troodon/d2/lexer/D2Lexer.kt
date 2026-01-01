@@ -219,7 +219,17 @@ class D2Lexer : LexerBase() {
                     tokenEnd++
                 }
             }
-            tokenType = D2Types.NUMBER
+            // If immediately followed by a letter (e.g., 283.56PLN), treat as identifier instead
+            if (tokenEnd < endOffset && (buffer[tokenEnd].isLetter() || buffer[tokenEnd] == '_')) {
+                while (tokenEnd < endOffset &&
+                    (buffer[tokenEnd].isLetterOrDigit() || buffer[tokenEnd] == '-' || buffer[tokenEnd] == '_' || buffer[tokenEnd] == '.')
+                ) {
+                    tokenEnd++
+                }
+                tokenType = D2Types.IDENTIFIER
+            } else {
+                tokenType = D2Types.NUMBER
+            }
         }
         // Identifier or Keyword
         else if (c.isLetter() || c == '_') {

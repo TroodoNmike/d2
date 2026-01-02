@@ -124,11 +124,12 @@ fun getLatestChangelog(): String {
                 break
             }
             foundFirstVersion = true
-            // Extract version number from ## [1.0.4]
+            // Extract version number from ## [1.0.4] or ## [1.0.4] - 2026-01-02
             version = line.substringAfter("[").substringBefore("]")
             continue
         }
-        if (foundFirstVersion && line.isNotBlank()) {
+        if (foundFirstVersion && line.isNotBlank() && !line.startsWith("###")) {
+            // Skip section headers like ### Added, ### Changed, ### Fixed
             // Convert markdown list item to HTML
             var htmlLine = line.trimStart().removePrefix("- ")
 

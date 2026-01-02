@@ -1,3 +1,11 @@
+## [1.0.5]
+- Added comprehensive autocomplete feature:
+  - Identifier completion: Suggests defined objects and connections from the current file
+  - Node property completion: Suggests `shape`, `icon`, `style`, and `label` properties when inside node blocks, excluding already-defined properties
+  - Shape value completion: Suggests all 18 available D2 shapes (rectangle, circle, diamond, etc.) after `shape:` property
+  - Dynamic refresh: Autocomplete list updates as you type, picking up newly added identifiers
+  - Context-aware: Excludes the current node name when completing inside that node's block
+
 ## [1.0.4]
 - Improved syntax highlighting: numbers with units (e.g., `283.56USD`) are no longer incorrectly highlighted as numeric literals.
 

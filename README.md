@@ -16,6 +16,7 @@ Comprehensive D2 language support for IntelliJ-based IDEs. Create beautiful diag
 - 🔧 **Auto-format** - Automatic code formatting using `d2 fmt`
 - ⏱️ **Configurable Auto-refresh Delay** - Adjust the debounce delay used for auto-refresh
 - ⌨️ **Smart Editing** - Brace matching, commenting, and code style settings
+- 💡 **Autocomplete** - Smart completion for identifiers, node properties, and shape values
 - 🎯 **File Type Icon** - Custom icon for `.d2` files in project tree
 - ⚙️ **Configurable D2 CLI** - Set the D2 executable path and additional CLI arguments (e.g., `--animate-interval=1000`)
 

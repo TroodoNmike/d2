@@ -5,13 +5,105 @@ plugins {
 }
 
 group = "com.troodon.d2"
-version = "1.0.4"
+version = "1.0.5"
 
 repositories {
     mavenCentral()
     intellijPlatform {
         defaultRepositories()
     }
+}
+
+fun getPluginDescription(): String {
+    val readmeFile = file("README.md")
+    if (!readmeFile.exists()) {
+        return "D2 language support for IntelliJ-based IDEs"
+    }
+
+    val lines = readmeFile.readLines()
+    val featuresSection = mutableListOf<String>()
+    val requirementsSection = mutableListOf<String>()
+
+    var inFeaturesSection = false
+    var inRequirementsSection = false
+
+    for (line in lines) {
+        when {
+            line.startsWith("## ✨ Features") || line.startsWith("## Features") -> {
+                inFeaturesSection = true
+                inRequirementsSection = false
+                continue
+            }
+            line.startsWith("## 📋 Requirements") || line.startsWith("## Requirements") -> {
+                inFeaturesSection = false
+                inRequirementsSection = true
+                continue
+            }
+            line.startsWith("##") -> {
+                // Stop when we hit another section
+                inFeaturesSection = false
+                inRequirementsSection = false
+            }
+            inFeaturesSection && line.startsWith("- ") -> {
+                // Remove emoji and markdown formatting
+                var cleanLine = line.trimStart()
+                    .removePrefix("- ")
+                    .replace(Regex("^[🎨👁⚡🖼🖱📤🔧⏱⌨💡🎯⚙][️\\uFE0F]?\\s*"), "") // Remove emojis and variation selectors
+                    .trim()
+
+                // Convert markdown code blocks (`text`) to HTML <code>text</code>
+                val parts = cleanLine.split("`")
+                cleanLine = parts.mapIndexed { index, part ->
+                    if (index % 2 == 1) "<code>$part</code>" else part
+                }.joinToString("")
+
+                // Extract feature name and convert remaining ** to <strong>
+                val featureNameMatch = Regex("^\\*\\*([^*]+)\\*\\*").find(cleanLine)
+                if (featureNameMatch != null) {
+                    val featureName = featureNameMatch.groupValues[1]
+                    var description = cleanLine.substring(featureNameMatch.range.last + 1)
+                        .removePrefix(" - ")
+                        .trim()
+                    // Convert any remaining **text** to <strong>text</strong>
+                    description = description.replace(Regex("\\*\\*([^*]+)\\*\\*"), "<strong>$1</strong>")
+                    featuresSection.add("<li><strong>$featureName</strong> - $description</li>")
+                } else {
+                    featuresSection.add("<li>$cleanLine</li>")
+                }
+            }
+            inRequirementsSection && line.isNotBlank() && !line.startsWith("###") && !line.startsWith("```") -> {
+                requirementsSection.add(line)
+            }
+        }
+    }
+
+    val featuresHtml = if (featuresSection.isNotEmpty()) {
+        """
+        <h3>Features</h3>
+        <ul>
+            ${featuresSection.joinToString("\n            ")}
+        </ul>
+        """.trimIndent()
+    } else ""
+
+    val requirementsHtml = if (requirementsSection.isNotEmpty()) {
+        var reqText = requirementsSection.joinToString(" ").trim()
+        // Convert markdown bold (**text**) to HTML
+        reqText = reqText.replace(Regex("\\*\\*([^*]+)\\*\\*"), "<strong>$1</strong>")
+        """
+        <h3>Requirements</h3>
+        <p>$reqText Install from <a href="https://d2lang.com">d2lang.com</a></p>
+        """.trimIndent()
+    } else ""
+
+    return """
+<h2>D2 Language Support</h2>
+<p>Comprehensive support for D2 (Declarative Diagramming) language in IntelliJ-based IDEs.</p>
+
+$featuresHtml
+
+$requirementsHtml
+""".trimIndent()
 }
 
 fun getLatestChangelog(): String {
@@ -78,6 +170,7 @@ intellijPlatform {
             sinceBuild = "243"
         }
 
+        description = getPluginDescription()
         changeNotes = getLatestChangelog()
     }
 }

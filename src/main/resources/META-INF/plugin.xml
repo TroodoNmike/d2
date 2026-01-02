@@ -10,38 +10,7 @@
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
     <vendor url="https://github.com/TroodoNmike">TroodoN</vendor>
 
-    <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
-         Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-description -->
-    <description><![CDATA[
-        <h2>D2 Language Support</h2>
-        <p>Comprehensive support for D2 (Declarative Diagramming) language in IntelliJ-based IDEs.</p>
-
-        <h3>Features</h3>
-        <ul>
-            <li><strong>Live Preview</strong> - Real-time diagram rendering with auto-refresh</li>
-            <li><strong>Split Editor</strong> - Edit D2 code and preview side-by-side</li>
-            <li><strong>Syntax Highlighting</strong> - Color-coded syntax for D2 diagram files</li>
-            <li><strong>Preview Modes</strong> - Toggle rendering between SVG (HTML) and PNG</li>
-            <li><strong>Interactive Preview</strong> - Pan/drag to move and zoom controls</li>
-            <li><strong>Export</strong> - Export matches the active preview mode (.svg or .png)</li>
-            <li><strong>Auto-format</strong> - Optional automatic code formatting using <code>d2 fmt</code></li>
-            <li><strong>Configurable Auto-refresh Delay</strong> - Adjust debounce delay for auto-refresh</li>
-            <li><strong>Code Editing</strong> - Brace matching, commenting, and code style settings</li>
-            <li><strong>File Type Icon</strong> - Custom icon for <code>.d2</code> files</li>
-            <li><strong>Configurable D2 CLI</strong> - Set executable path and additional CLI arguments</li>
-        </ul>
-
-        <h3>Requirements</h3>
-        <p>D2 CLI must be installed on your system. Install from <a href="https://d2lang.com">d2lang.com</a></p>
-
-        <h3>Getting Started</h3>
-        <ol>
-            <li>Install D2 CLI: <code>curl -fsSL https://d2lang.com/install.sh | sh -s --</code></li>
-            <li>Configure D2 CLI path in Settings → Tools → D2 Diagram</li>
-            <li>Open or create a .d2 file</li>
-            <li>Start creating diagrams with live preview!</li>
-        </ol>
-    ]]></description>
+    <!-- Description is now generated from README.md via build.gradle.kts -->
 
     <!-- Product and plugin compatibility requirements.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
@@ -78,5 +47,8 @@
                 instance="com.troodon.d2.settings.D2SettingsConfigurable"
                 id="com.troodon.d2.settings"
                 displayName="D2 Diagram"/>
+        <completion.contributor
+                language="D2"
+                implementationClass="com.troodon.d2.editor.D2CompletionContributor"/>
     </extensions>
 </idea-plugin>

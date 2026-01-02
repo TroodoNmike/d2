@@ -1,3 +1,7 @@
+## [1.0.6] - 2026-01-02
+### Fixed
+- Removed deprecated API usage in completion auto-popup implementation.
+
 ## [1.0.5] - 2026-01-02
 ### Added
 - Comprehensive autocomplete feature:

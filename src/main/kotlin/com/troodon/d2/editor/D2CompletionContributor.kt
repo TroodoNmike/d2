@@ -1,8 +1,12 @@
 package com.troodon.d2.editor
 
+import com.intellij.codeInsight.AutoPopupController
 import com.intellij.codeInsight.completion.*
+import com.intellij.codeInsight.editorActions.TypedHandlerDelegate
+import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.project.Project
 import com.intellij.patterns.PlatformPatterns
-import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.troodon.d2.lang.D2Language
 
 class D2CompletionContributor : CompletionContributor() {
@@ -28,11 +32,21 @@ class D2CompletionContributor : CompletionContributor() {
             D2IdentifierCompletionProvider()
         )
     }
+}
 
-    @Deprecated("Deprecated in Java")
-    override fun invokeAutoPopup(position: PsiElement, typeChar: Char): Boolean {
+class D2TypedHandler : TypedHandlerDelegate() {
+    override fun checkAutoPopup(charTyped: Char, project: Project, editor: Editor, file: PsiFile): Result {
+        if (file.language != D2Language.INSTANCE) {
+            return Result.CONTINUE
+        }
+
         // Auto-trigger completion when typing identifiers
         // This dynamically picks up newly added identifiers as you type
-        return typeChar.isLetterOrDigit() || typeChar == '_'
+        if (charTyped.isLetterOrDigit() || charTyped == '_') {
+            AutoPopupController.getInstance(project).scheduleAutoPopup(editor)
+            return Result.STOP
+        }
+
+        return Result.CONTINUE
     }
 }

@@ -50,5 +50,7 @@
         <completion.contributor
                 language="D2"
                 implementationClass="com.troodon.d2.editor.D2CompletionContributor"/>
+        <typedHandler
+                implementation="com.troodon.d2.editor.D2TypedHandler"/>
     </extensions>
 </idea-plugin>

@@ -20,6 +20,10 @@ Comprehensive D2 language support for IntelliJ-based IDEs. Create beautiful diag
 - 🎯 **File Type Icon** - Custom icon for `.d2` files in project tree
 - ⚙️ **Configurable D2 CLI** - Set the D2 executable path and additional CLI arguments (e.g., `--animate-interval=1000`)
 
+<div>
+  <img src="docs/assets/demo.gif" alt="D2" width="920" />
+</div>
+
 ## 📋 Requirements
 
 **D2 CLI** must be installed on your system.

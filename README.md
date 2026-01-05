@@ -12,7 +12,7 @@ Comprehensive D2 language support for IntelliJ-based IDEs. Create beautiful diag
 - ⚡ **Split Editor** - Edit D2 code and preview side-by-side
 - 🖼️ **Preview Modes** - Toggle preview rendering between **SVG (HTML)** and **PNG**
 - 🖱️ **Interactive Preview** - Pan/drag to move, zoom controls (SVG also supports Ctrl/Cmd + scroll)
-- 📤 **Export** - Export respects the active preview mode (**.svg** or **.png**)
+- 📤 **Export** - Export to multiple formats: **.svg**, **.png**, **.pdf**, **.txt**, **.pptx**
 - 🔧 **Auto-format** - Automatic code formatting using `d2 fmt`
 - ⏱️ **Configurable Auto-refresh Delay** - Adjust the debounce delay used for auto-refresh
 - ⌨️ **Smart Editing** - Brace matching, commenting, and code style settings

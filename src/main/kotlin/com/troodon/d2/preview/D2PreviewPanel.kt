@@ -12,7 +12,6 @@ import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.JBPopupMenu
 import com.intellij.openapi.util.io.FileUtil
-import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.Alarm
 import com.intellij.util.ui.JBUI
 import com.troodon.d2.settings.D2SettingsConfigurable
@@ -30,6 +29,13 @@ class D2PreviewPanel(
     private val LOG = Logger.getInstance(D2PreviewPanel::class.java)
     private val panel = JPanel(BorderLayout())
     private val statusLabel = JLabel("<html> </html>")
+    private val copyButton = JButton(AllIcons.Actions.Copy).apply {
+        toolTipText = "Copy to clipboard"
+        isBorderPainted = false
+        isFocusPainted = false
+        isContentAreaFilled = false
+        cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
+    }
     private val refreshButton = JButton("Refresh", AllIcons.Actions.Refresh)
     private val zoomInButton = JButton("Zoom In", AllIcons.General.ZoomIn)
     private val zoomOutButton = JButton("Zoom Out", AllIcons.General.ZoomOut)
@@ -63,6 +69,7 @@ class D2PreviewPanel(
     private var isFormatting = false
 
     private val contentPanel = JPanel(BorderLayout())
+    private val statusLabelPanel = JPanel(BorderLayout())
 
     val component: JComponent get() = panel
 
@@ -84,6 +91,16 @@ class D2PreviewPanel(
         }
     }
 
+    // Only include --animate-interval for outputs that can use it (GIF and SVG).
+    private fun filterArgumentsForOutput(d2Arguments: String, outputExtension: String): String {
+        val ext = outputExtension.lowercase()
+        val allowAnimateInterval = (ext == ".gif" || ext == ".svg")
+        if (allowAnimateInterval) return d2Arguments
+
+        // Remove any --animate-interval=<number> occurrences when not supported/desired
+        return d2Arguments.replace(Regex("""\s*--animate-interval=\d+\s*"""), " ").trim()
+    }
+
     init {
         val connection = project.messageBus.connect(this)
         connection.subscribe(
@@ -98,10 +115,18 @@ class D2PreviewPanel(
                 }
             }
         )
+        copyButton.addActionListener {
+            val text = statusLabel.text.replace("<html>", "").replace("</html>", "")
+            java.awt.Toolkit.getDefaultToolkit().systemClipboard.setContents(
+                java.awt.datatransfer.StringSelection(text),
+                null
+            )
+        }
+
         refreshButton.addActionListener {
             updatePreview()
         }
-        
+
         zoomInButton.addActionListener {
             currentRenderer.zoomIn()
         }
@@ -113,11 +138,27 @@ class D2PreviewPanel(
         moreActionsButton.addActionListener {
             val popupMenu = JBPopupMenu()
 
-            val exportMenuItem = JMenuItem("Export", AllIcons.ToolbarDecorator.Export)
-            exportMenuItem.addActionListener {
-                exportToPreview()
-            }
-            popupMenu.add(exportMenuItem)
+            val exportPngItem = JMenuItem("Export to PNG", AllIcons.ToolbarDecorator.Export)
+            exportPngItem.addActionListener { exportToFormat(".png") }
+            popupMenu.add(exportPngItem)
+
+            val exportSvgItem = JMenuItem("Export to SVG", AllIcons.ToolbarDecorator.Export)
+            exportSvgItem.addActionListener { exportToFormat(".svg") }
+            popupMenu.add(exportSvgItem)
+
+            val exportPdfItem = JMenuItem("Export to PDF", AllIcons.ToolbarDecorator.Export)
+            exportPdfItem.addActionListener { exportToFormat(".pdf") }
+            popupMenu.add(exportPdfItem)
+
+            val exportTxtItem = JMenuItem("Export to TXT", AllIcons.ToolbarDecorator.Export)
+            exportTxtItem.addActionListener { exportToFormat(".txt") }
+            popupMenu.add(exportTxtItem)
+
+            val exportPptxItem = JMenuItem("Export to PPTX", AllIcons.ToolbarDecorator.Export)
+            exportPptxItem.addActionListener { exportToFormat(".pptx") }
+            popupMenu.add(exportPptxItem)
+
+            popupMenu.addSeparator()
 
             val settingsMenuItem = JMenuItem("Settings", AllIcons.General.Settings)
             settingsMenuItem.addActionListener {
@@ -168,7 +209,6 @@ class D2PreviewPanel(
         statusLabel.verticalAlignment = JLabel.TOP
 
         // Wrap statusLabel in a panel to constrain width
-        val statusLabelPanel = JPanel(BorderLayout())
         statusLabelPanel.add(statusLabel, BorderLayout.CENTER)
 
         val bottomButtonPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 5, 0))
@@ -190,7 +230,7 @@ class D2PreviewPanel(
 
         updatePreview() // Initial render
     }
-    
+
     private fun switchRenderer(newRenderer: PreviewRenderer) {
         if (currentRenderer != newRenderer) {
             contentPanel.removeAll()
@@ -249,12 +289,7 @@ class D2PreviewPanel(
                 // Execute d2 CLI to generate output file
                 val settings = D2SettingsState.getInstance(project)
                 val d2Path = settings.getEffectiveD2Path()
-                var d2Arguments = settings.d2Arguments
-
-                // Exclude --animate-interval when using PNG renderer
-                if (currentRenderer is PngPreviewRenderer) {
-                    d2Arguments = d2Arguments.replace(Regex("--animate-interval=\\d+"), "").trim()
-                }
+                val d2Arguments = filterArgumentsForOutput(settings.d2Arguments, extension)
 
                 // Build command with arguments
                 val command = mutableListOf(d2Path)
@@ -297,6 +332,9 @@ class D2PreviewPanel(
     private fun showError(message: String) {
         ApplicationManager.getApplication().invokeLater {
             statusLabel.text = "<html>Error: $message</html>"
+            statusLabelPanel.add(copyButton, BorderLayout.EAST)
+            statusLabelPanel.revalidate()
+            statusLabelPanel.repaint()
             LOG.warn("Preview error: $message")
         }
     }
@@ -304,45 +342,68 @@ class D2PreviewPanel(
     private fun showStatus(message: String) {
         ApplicationManager.getApplication().invokeLater {
             statusLabel.text = "<html>$message</html>"
+            statusLabelPanel.remove(copyButton)
+            statusLabelPanel.revalidate()
+            statusLabelPanel.repaint()
         }
     }
-    
-    private fun exportToPreview() {
-        tempOutputFile?.let { outputFile ->
-            if (outputFile.exists()) {
-                try {
-                    val extension = currentRenderer.getFileExtension()
-                    // Create a persistent export file in user's temp directory
-                    val exportFile = File(System.getProperty("java.io.tmpdir"), "d2-export-${System.currentTimeMillis()}$extension")
-                    outputFile.copyTo(exportFile, overwrite = true)
 
-                    // Open with system default application (Preview on macOS)
-                    val osName = System.getProperty("os.name").lowercase()
-                    when {
-                        osName.contains("mac") -> {
-                            ProcessBuilder("open", exportFile.absolutePath).start()
-                        }
-                        osName.contains("win") -> {
-                            ProcessBuilder("cmd", "/c", "start", "", exportFile.absolutePath).start()
-                        }
-                        osName.contains("nix") || osName.contains("nux") -> {
-                            ProcessBuilder("xdg-open", exportFile.absolutePath).start()
-                        }
-                        else -> {
-                            showStatus("Export: OS not supported")
-                            return
-                        }
-                    }
+    private fun exportToFormat(extension: String) {
+        Thread {
+            try {
+                showStatus("Exporting $extension...")
 
-                    showStatus("Exported to ${exportFile.name}")
-                } catch (e: Exception) {
-                    LOG.warn("Failed to export preview", e)
-                    showStatus("Export failed: ${e.message}")
+                // Ensure we have a source file that reflects current editor contents
+                val editorContent = ApplicationManager.getApplication().runReadAction<String> {
+                    editor.document.text
                 }
-            } else {
-                showStatus("No preview to export. Click Refresh first.")
+                val sourceFile = tempSourceFile?.takeIf { it.exists() } ?: FileUtil.createTempFile("d2-source", ".d2", true)
+                sourceFile.writeText(editorContent)
+                tempSourceFile = sourceFile
+
+                val settings = D2SettingsState.getInstance(project)
+                val d2Path = settings.getEffectiveD2Path()
+                val d2Arguments = filterArgumentsForOutput(settings.d2Arguments, extension)
+
+                val exportFile = File(
+                    System.getProperty("java.io.tmpdir"),
+                    "d2-export-${System.currentTimeMillis()}$extension"
+                )
+
+                val command = mutableListOf(d2Path)
+                if (d2Arguments.isNotBlank()) {
+                    command.addAll(d2Arguments.split(Regex("\\s+(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)")))
+                }
+                command.add(sourceFile.absolutePath)
+                command.add(exportFile.absolutePath)
+
+                val process = ProcessBuilder(command).redirectErrorStream(true).start()
+                val exitCode = process.waitFor()
+
+                if (exitCode != 0 || !exportFile.exists()) {
+                    val error = process.inputStream.bufferedReader().readText()
+                    showError("Export failed ($extension): $error")
+                    return@Thread
+                }
+
+                // Open with system default application
+                val osName = System.getProperty("os.name").lowercase()
+                when {
+                    osName.contains("mac") -> ProcessBuilder("open", exportFile.absolutePath).start()
+                    osName.contains("win") -> ProcessBuilder("cmd", "/c", "start", "", exportFile.absolutePath).start()
+                    osName.contains("nix") || osName.contains("nux") -> ProcessBuilder("xdg-open", exportFile.absolutePath).start()
+                    else -> {
+                        showStatus("Exported to ${exportFile.name} (OS not supported for auto-open)")
+                        return@Thread
+                    }
+                }
+
+                showStatus("Exported to ${exportFile.name}")
+            } catch (e: Exception) {
+                LOG.warn("Failed to export", e)
+                showError("Export failed: ${e.message}")
             }
-        } ?: showStatus("No preview to export. Click Refresh first.")
+        }.start()
     }
 
     override fun dispose() {

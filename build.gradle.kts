@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.troodon.d2"
-version = "1.0.6"
+version = "1.0.7"
 
 repositories {
     mavenCentral()

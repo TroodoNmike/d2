@@ -1,6 +1,11 @@
+## [1.0.7] - 2026-01-05
+### Added
+- Export support for additional formats: PDF, TXT, and PPTX (in addition to existing SVG and PNG)
+- Copy to clipboard button in preview status bar for error messages
+
 ## [1.0.6] - 2026-01-02
 ### Fixed
-- Removed deprecated API usage in completion auto-popup implementation.
+- Removed deprecated API usage in the completion auto-popup implementation.
 
 ## [1.0.5] - 2026-01-02
 ### Added

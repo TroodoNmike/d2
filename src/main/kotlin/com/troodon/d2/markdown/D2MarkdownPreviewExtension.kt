@@ -60,6 +60,7 @@ private class D2BrowserExtension(
                 val resultJson = try {
                     val project = panel.project ?: return@executeOnPooledThread
                     val settings = D2SettingsState.getInstance(project)
+                    if (!settings.renderD2InMarkdown) return@executeOnPooledThread
                     // If the IDE is in dark mode and the user has not already set a --theme flag, inject D2's dark theme.
                     val themeArgs = if (!JBColor.isBright() && !settings.d2Arguments.contains("--theme")) "--theme 200" else ""
                     val effectiveArgs = listOf(themeArgs, settings.d2Arguments)

@@ -22,6 +22,7 @@ class D2SettingsState : PersistentStateComponent<D2SettingsState> {
     var debounceDelay: Int = DEFAULT_DEBOUNCE_DELAY // Auto-refresh delay in milliseconds
     var previewBackground: String = DEFAULT_PREVIEW_BACKGROUND // Preview background mode
     var previewBackgroundCustomColor: String = DEFAULT_PREVIEW_BACKGROUND_CUSTOM_COLOR // Custom background color hex
+    var renderD2InMarkdown: Boolean = true // Whether to render D2 diagrams in Markdown preview
     var useWsl: Boolean = false // Whether to run D2 CLI through WSL2
     var wslDistribution: String = "" // WSL distribution name (empty = default)
 

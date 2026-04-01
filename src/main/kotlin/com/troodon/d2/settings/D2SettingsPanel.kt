@@ -46,6 +46,7 @@ class D2SettingsPanel(private val project: Project) {
         preferredSize = Dimension(24, 24)
         toolTipText = "Choose custom color"
     }
+    private val renderD2InMarkdownCheckBox = JCheckBox("Render D2 diagrams in Markdown preview")
     private val useWslCheckBox = JCheckBox("Use WSL to run D2")
     private val wslDistributionField = JBTextField().apply {
         toolTipText = "Leave empty for default distribution"
@@ -103,6 +104,7 @@ class D2SettingsPanel(private val project: Project) {
         customColorButton.name = settings.previewBackgroundCustomColor
         try { customColorButton.background = Color.decode(settings.previewBackgroundCustomColor) } catch (_: Exception) {}
         customColorButton.isVisible = settings.previewBackground == "Custom"
+        renderD2InMarkdownCheckBox.isSelected = settings.renderD2InMarkdown
         useWslCheckBox.isSelected = settings.useWsl
         wslDistributionField.text = settings.wslDistribution
         wslDistributionField.isEnabled = settings.useWsl
@@ -140,6 +142,8 @@ class D2SettingsPanel(private val project: Project) {
             .addTooltip("Delay in milliseconds before auto-refreshing the preview after typing")
             .addLabeledComponent("Preview Background:", previewBgPanel)
             .addTooltip("Background color for the SVG preview panel")
+            .addComponent(renderD2InMarkdownCheckBox)
+            .addTooltip("Render D2 code blocks as diagrams in the Markdown preview")
             .addLabeledComponent("D2 CLI Status:", statusPanel)
             .addLabeledComponent("D2 Version:", versionLabel)
             .addComponentFillVertically(JPanel(), 0)
@@ -165,6 +169,7 @@ class D2SettingsPanel(private val project: Project) {
                debounceDelayField.text.toIntOrNull() != settings.debounceDelay ||
                previewBackgroundCombo.selectedItem as String != settings.previewBackground ||
                (customColorButton.name ?: DEFAULT_PREVIEW_BACKGROUND_CUSTOM_COLOR) != settings.previewBackgroundCustomColor ||
+               renderD2InMarkdownCheckBox.isSelected != settings.renderD2InMarkdown ||
                useWslCheckBox.isSelected != settings.useWsl ||
                wslDistributionField.text != settings.wslDistribution
     }
@@ -176,6 +181,7 @@ class D2SettingsPanel(private val project: Project) {
         settings.debounceDelay = debounceDelayField.text.toIntOrNull() ?: DEFAULT_DEBOUNCE_DELAY
         settings.previewBackground = previewBackgroundCombo.selectedItem as String
         settings.previewBackgroundCustomColor = customColorButton.name ?: DEFAULT_PREVIEW_BACKGROUND_CUSTOM_COLOR
+        settings.renderD2InMarkdown = renderD2InMarkdownCheckBox.isSelected
         settings.useWsl = useWslCheckBox.isSelected
         settings.wslDistribution = wslDistributionField.text.trim()
         updateVersion()
@@ -190,6 +196,7 @@ class D2SettingsPanel(private val project: Project) {
         customColorButton.name = settings.previewBackgroundCustomColor
         try { customColorButton.background = Color.decode(settings.previewBackgroundCustomColor) } catch (_: Exception) {}
         customColorButton.isVisible = settings.previewBackground == "Custom"
+        renderD2InMarkdownCheckBox.isSelected = settings.renderD2InMarkdown
         useWslCheckBox.isSelected = settings.useWsl
         wslDistributionField.text = settings.wslDistribution
         wslDistributionField.isEnabled = settings.useWsl

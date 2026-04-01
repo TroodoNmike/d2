@@ -2,6 +2,7 @@ package com.troodon.d2.markdown
 
 import com.intellij.openapi.diagnostic.Logger
 import com.troodon.d2.util.D2CommandBuilder
+import com.troodon.d2.util.D2ProcessFactory
 import java.util.concurrent.TimeUnit
 
 object D2Runner {
@@ -37,7 +38,7 @@ object D2Runner {
     }
 
     private fun defaultRun(command: List<String>, input: String): Pair<Int, String> {
-        val process = ProcessBuilder(command).start()
+        val process = D2ProcessFactory.create(command).start()
 
         // Write stdin on a separate thread to prevent deadlock when the process
         // buffer fills up before we start reading stdout.

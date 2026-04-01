@@ -41,6 +41,9 @@
     matches.forEach(function (rule) {
       var nameMatch = rule.match(/font-family:\s*([^;"\n]+)/);
       if (!nameMatch) return;
+      // Only allow data: URIs in font-face src — block external URLs
+      var srcMatch = rule.match(/src:\s*url\(["']?([^"')]+)/);
+      if (srcMatch && srcMatch[1] && !/^data:/i.test(srcMatch[1])) return;
       var key = nameMatch[1].trim().replace(/['"]/g, '');
       if (!document.head.querySelector('style[data-d2-font="' + key + '"]')) {
         var el = document.createElement('style');
@@ -106,11 +109,31 @@
     pre.replaceWith(box);
   }
 
+  // Sanitizes SVG to prevent script injection via crafted D2 output.
+  // Strips <script>, <iframe>, <foreignObject>, on* event handlers,
+  // and javascript: protocol in href attributes.
+  function sanitizeSvg(svg) {
+    // Remove dangerous elements and their content (paired and self-closing)
+    svg = svg.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '');
+    svg = svg.replace(/<script\b[^/]*\/\s*>/gi, '');
+    svg = svg.replace(/<iframe\b[^>]*>[\s\S]*?<\/iframe\s*>/gi, '');
+    svg = svg.replace(/<iframe\b[^/]*\/\s*>/gi, '');
+    svg = svg.replace(/<foreignObject\b[^>]*>[\s\S]*?<\/foreignObject\s*>/gi, '');
+    svg = svg.replace(/<foreignObject\b[^/]*\/\s*>/gi, '');
+    // Remove on* event handler attributes
+    svg = svg.replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*')/gi, '');
+    // Replace javascript: hrefs with safe "#"
+    svg = svg.replace(/((?:xlink:)?href)\s*=\s*"javascript:[^"]*"/gi, '$1="#"');
+    svg = svg.replace(/((?:xlink:)?href)\s*=\s*'javascript:[^']*'/gi, "$1='#'");
+    return svg;
+  }
+
   function showD2Svg(pre, svg) {
     var host = document.createElement('div');
     // Shadow DOM isolates D2's embedded <style> tags from the page.
     var shadow = host.attachShadow({ mode: 'open' });
     // Hoist @font-face rules to the light DOM so JCEF/Chromium resolves them.
+    svg = sanitizeSvg(svg);
     hoistFontFaces(svg);
 
     svg = stripSvgBackground(svg);

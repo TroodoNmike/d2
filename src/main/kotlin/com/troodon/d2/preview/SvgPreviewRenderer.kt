@@ -10,6 +10,7 @@ import org.cef.handler.CefLoadHandlerAdapter
 import org.cef.browser.CefMessageRouter
 import org.cef.handler.CefMessageRouterHandlerAdapter
 import java.awt.BorderLayout
+import com.troodon.d2.util.SvgSanitizer
 import java.io.File
 import java.nio.file.Files
 import javax.swing.JComponent
@@ -195,6 +196,7 @@ class SvgPreviewRenderer : PreviewRenderer {
                     // so the CSS background shows through. The first <rect> in D2's SVG
                     // output is the background fill (class "fill-N7").
                     var svgContent = Files.readString(outputFile.toPath())
+                    svgContent = SvgSanitizer.sanitize(svgContent)
                     svgContent = svgContent.replaceFirst(
                         Regex("""(<rect\s[^>]*?fill=")#[0-9A-Fa-f]{6}("[^>]*?class="[^"]*fill-N7[^"]*"[^/]*/\s*>)"""),
                         "$1none$2"

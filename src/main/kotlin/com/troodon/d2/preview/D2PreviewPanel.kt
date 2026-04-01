@@ -5,6 +5,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
+import com.troodon.d2.util.D2ProcessFactory
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
@@ -314,7 +315,7 @@ class D2PreviewPanel(
                             d2Path, fmtTempFile.absolutePath,
                             fmtSettings.useWsl, fmtSettings.wslDistribution
                         )
-                        val fmtProcessBuilder = ProcessBuilder(fmtCommand)
+                        val fmtProcessBuilder = D2ProcessFactory.create(fmtCommand)
                             .redirectErrorStream(true)
                         if (originalFileDir != null) {
                             fmtProcessBuilder.directory(originalFileDir)
@@ -353,7 +354,7 @@ class D2PreviewPanel(
                     settings.useWsl, settings.wslDistribution
                 )
 
-                val processBuilder = ProcessBuilder(command).redirectErrorStream(true)
+                val processBuilder = D2ProcessFactory.create(command).redirectErrorStream(true)
                 if (originalFileDir != null) {
                     processBuilder.directory(originalFileDir)
                 }
@@ -446,7 +447,7 @@ class D2PreviewPanel(
                     settings.useWsl, settings.wslDistribution
                 )
 
-                val processBuilder = ProcessBuilder(command).redirectErrorStream(true)
+                val processBuilder = D2ProcessFactory.create(command).redirectErrorStream(true)
                 if (originalFileDir != null) {
                     processBuilder.directory(originalFileDir)
                 }

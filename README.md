@@ -19,6 +19,7 @@ Comprehensive D2 language support for IntelliJ-based IDEs. Create beautiful diag
 - 💡 **Autocomplete** - Smart completion for identifiers, node properties, and shape values
 - 🎯 **File Type Icon** - Custom icon for `.d2` files in project tree
 - ⚙️ **Configurable D2 CLI** - Set the D2 executable path and additional CLI arguments (e.g., `--animate-interval=1000`)
+- 📝 **Markdown Preview** - Renders ` ```d2 ` fenced code blocks as inline SVG diagrams inside the IDE's Markdown preview
 
 <div>
   <img src="docs/assets/demo.gif" alt="D2" width="920" />
@@ -52,14 +53,18 @@ For other installation methods, visit [d2lang.com](https://d2lang.com/tour/insta
 
 ## 💡 About D2
 
-D2 is a modern diagram scripting language that turns text into diagrams. It's designed to be easy to learn, powerful, and flexible.
+D2 is a modern diagram scripting language that turns text into diagrams. It's designed to be easy to learn, powerful, and flexible. Learn more at [d2lang.com](https://d2lang.com).
 
 **Example D2 code:**
-```d2
+```
 x -> y: hello world
 ```
 
-Learn more at [d2lang.com](https://d2lang.com).
+D2 diagrams also render inline inside Markdown files — just use a fenced ` ```d2 ` block:
+
+```d2
+x -> y: hello world
+```
 
 ## 🤝 Contributing
 

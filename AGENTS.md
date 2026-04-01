@@ -6,10 +6,10 @@ This file provides guidance to coding agents working in this repository.
 
 This is a JetBrains IntelliJ Platform plugin that provides D2 (Declarative Diagramming) language support for IntelliJ-based IDEs. The plugin offers syntax highlighting, live preview, autocomplete, and export capabilities for `.d2` files.
 
-**Plugin ID:** `com.troodon.d2`  
-**Current Version:** 1.0.7  
-**Minimum IDE Build:** 243 (IntelliJ IDEA 2024.3+)  
-**Target JVM:** 21  
+**Plugin ID:** `com.troodon.d2`
+**Current Version:** 1.0.12
+**Minimum IDE Build:** 243 (IntelliJ IDEA 2024.3+)
+**Target JVM:** 21
 **Primary Language:** Kotlin
 
 ## Development Commands
@@ -32,6 +32,17 @@ This is a JetBrains IntelliJ Platform plugin that provides D2 (Declarative Diagr
 
 # Clean build artifacts
 ./gradlew clean
+
+# Launch sandboxed IDE with plugin loaded
+./gradlew runIde
+
+# Version management (via Makefile)
+make bump-patch   # bump patch version
+make bump-minor   # bump minor version
+make bump-major   # bump major version
+make build        # alias for ./gradlew buildPlugin
+make test         # alias for ./gradlew test
+make run          # alias for ./gradlew runIde
 ```
 
 ## Architecture Overview
@@ -56,6 +67,7 @@ This is a JetBrains IntelliJ Platform plugin that provides D2 (Declarative Diagr
   - `D2IdentifierCompletionProvider`: Suggests defined objects/connections
   - `D2NodePropertyCompletionProvider`: Suggests node properties (shape, icon, style, label)
   - `D2ShapeCompletionProvider`: Suggests shape values (rectangle, circle, etc.)
+  - `D2StylePropertyCompletionProvider`: Suggests style properties inside `style {}` blocks (opacity, fill, stroke, etc.)
 - `D2TypedHandler`: Auto-triggers completion as user types
 - `D2PairedBraceMatcher`: Brace matching for `{}` pairs
 - `D2Commenter`: Line and block comment support
@@ -78,6 +90,9 @@ This is a JetBrains IntelliJ Platform plugin that provides D2 (Declarative Diagr
   - `d2CliPath`: Path to D2 executable (auto-detects if empty)
   - `d2Arguments`: Additional CLI args (default: `--animate-interval=1000`)
   - `debounceDelay`: Auto-refresh delay in ms (default: 1000)
+  - `previewBackground`: Background mode (IDE Theme / Transparent / Light / Dark / Custom color)
+  - `useWsl`: Toggle WSL2 support (Windows Subsystem for Linux)
+  - `wslDistribution`: WSL distribution name to use
 - `D2SettingsConfigurable`: Settings UI panel
 - `D2CliValidator`: Validates D2 installation and finds executable
 - `D2LanguageCodeStyleSettingsProvider`: Code style configuration

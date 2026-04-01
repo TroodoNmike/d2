@@ -1,0 +1,6 @@
+<idea-plugin>
+    <extensions defaultExtensionNs="org.intellij.markdown">
+        <browserPreviewExtensionProvider
+                implementation="com.troodon.d2.markdown.D2MarkdownPreviewExtension"/>
+    </extensions>
+</idea-plugin>

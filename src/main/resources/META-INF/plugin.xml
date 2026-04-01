@@ -15,6 +15,7 @@
     <!-- Product and plugin compatibility requirements.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
     <depends>com.intellij.modules.platform</depends>
+    <depends optional="true" config-file="markdown-preview.xml">org.intellij.plugins.markdown</depends>
 
     <!-- Extensions defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->

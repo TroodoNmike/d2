@@ -159,9 +159,7 @@ dependencies {
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
 
 
-        // Markdown plugin for Markdown preview extension support
-        bundledPlugin("org.intellij.plugins.markdown")
-        // Add other plugin dependencies for compilation here, example:
+        // Add plugin dependencies for compilation here, example:
         // bundledPlugin("com.intellij.java")
     }
     testImplementation(kotlin("test"))
@@ -175,6 +173,12 @@ intellijPlatform {
 
         description = getPluginDescription()
         changeNotes = getLatestChangelog()
+    }
+
+    pluginVerification {
+        ides {
+            recommended()
+        }
     }
 }
 

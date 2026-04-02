@@ -1,10 +1,12 @@
 ## [1.0.13] - 2026-04-01
 ### Added
-- D2 diagram rendering in Markdown preview: D2 code blocks are rendered as live SVG diagrams with automatic dark theme support
-- Setting to enable or disable D2 rendering in Markdown preview (enabled by default)
+- Plugin verification configuration for local compatibility checks (`./gradlew verifyPlugin`)
 
 ### Security
 - SVG sanitization and process environment hardening for preview rendering
+
+### Removed
+- Markdown preview D2 rendering (used experimental Markdown plugin APIs that caused compatibility warnings)
 
 ## [1.0.12] - 2026-02-24
 ### Added

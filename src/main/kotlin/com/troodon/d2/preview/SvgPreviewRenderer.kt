@@ -13,6 +13,7 @@ import java.awt.BorderLayout
 import com.troodon.d2.util.SvgSanitizer
 import java.io.File
 import java.nio.file.Files
+import java.util.Base64
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
@@ -22,6 +23,19 @@ class SvgPreviewRenderer : PreviewRenderer {
     private val LOG = Logger.getInstance(SvgPreviewRenderer::class.java)
     private val browser: JBCefBrowser? = if (JBCefApp.isSupported()) JBCefBrowser() else null
     private val panel = JPanel(BorderLayout())
+
+    // Bundled DOMPurify library, read once from plugin resources. This is the
+    // authoritative sanitizer: the raw SVG is decoded and passed through
+    // DOMPurify.sanitize() in the browser before it is ever inserted into the
+    // DOM, so embedded scripts/handlers never execute.
+    private val domPurifyJs: String by lazy {
+        javaClass.getResourceAsStream("/dompurify/purify.min.js")
+            ?.use { it.readBytes().toString(Charsets.UTF_8) }
+            ?: run {
+                LOG.error("Bundled DOMPurify resource not found; SVG markdown will not render")
+                ""
+            }
+    }
 
     var backgroundCss: String = "white"
     var isDarkTheme: Boolean = false
@@ -202,6 +216,14 @@ class SvgPreviewRenderer : PreviewRenderer {
                         "$1none$2"
                     )
 
+                    // The SVG is never inlined into the page markup (which would
+                    // execute any embedded script at parse time). Instead it is
+                    // base64-encoded, decoded in JS, run through DOMPurify, and
+                    // only then inserted into the DOM. Base64 also sidesteps any
+                    // "</script>"/quote escaping hazards in the JS string literal.
+                    val svgBase64 = Base64.getEncoder()
+                        .encodeToString(svgContent.toByteArray(Charsets.UTF_8))
+
                     LOG.info("Rendering with captured state - zoom: $currentZoom, scrollLeft: $currentScrollLeft, scrollTop: $currentScrollTop")
 
                 // Create HTML wrapper with zoom and pan support
@@ -264,7 +286,39 @@ class SvgPreviewRenderer : PreviewRenderer {
                                 background: ${if (isDarkTheme) "#2b2b2b" else "#f1f1f1"};
                             }
                         </style>
+                        <script>$domPurifyJs</script>
                         <script>
+                            // Raw (Kotlin-prefiltered) SVG, base64-encoded so it
+                            // cannot break out of this string literal. It is NOT
+                            // in the DOM yet — DOMPurify sanitizes it below before
+                            // insertion, so any embedded script never executes.
+                            const D2_SVG_B64 = "$svgBase64";
+
+                            function d2DecodeSvg(b64) {
+                                const bin = atob(b64);
+                                const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+                                return new TextDecoder('utf-8').decode(bytes);
+                            }
+
+                            function d2InsertSanitizedSvg() {
+                                const container = document.getElementById('svg-container');
+                                if (typeof DOMPurify === 'undefined') {
+                                    // Fail safe: never insert unsanitized markup.
+                                    container.textContent = 'Preview unavailable: sanitizer failed to load.';
+                                    return;
+                                }
+                                // Re-allow <foreignObject> (DOMPurify drops it by
+                                // default as an mXSS precaution) and mark it as an
+                                // HTML integration point so D2's Markdown XHTML
+                                // children survive. Scripts, on* handlers and
+                                // javascript: URLs are still stripped.
+                                const clean = DOMPurify.sanitize(d2DecodeSvg(D2_SVG_B64), {
+                                    ADD_TAGS: ['foreignObject'],
+                                    HTML_INTEGRATION_POINTS: { foreignobject: true }
+                                });
+                                container.innerHTML = clean;
+                            }
+
                             let isPanning = false;
                             let startX = 0;
                             let startY = 0;
@@ -277,6 +331,10 @@ class SvgPreviewRenderer : PreviewRenderer {
                             window.addEventListener('DOMContentLoaded', function() {
                                 const viewport = document.getElementById('viewport');
                                 const container = document.getElementById('svg-container');
+
+                                // Sanitize and insert the SVG before any layout
+                                // or transform logic reads the container.
+                                d2InsertSanitizedSvg();
 
                                 // Function to update Kotlin state
                                 function updateKotlinState() {
@@ -401,9 +459,7 @@ class SvgPreviewRenderer : PreviewRenderer {
                     </head>
                     <body>
                         <div id="viewport">
-                            <div id="svg-container">
-                                $svgContent
-                            </div>
+                            <div id="svg-container"></div>
                         </div>
                     </body>
                     </html>

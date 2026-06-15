@@ -41,12 +41,29 @@ class SvgSanitizerTest {
     }
 
     @Test
-    fun `strips foreignObject tags with nested HTML`() {
-        val input = """<svg><foreignObject><body><div>injected</div></body></foreignObject><rect/></svg>"""
+    fun `preserves foreignObject so Markdown blocks can render`() {
+        // D2 renders |md ...| blocks as <foreignObject> containing XHTML.
+        // It must survive this first pass; DOMPurify sanitizes its contents
+        // in-browser. Stripping it here would make Markdown disappear.
+        val input = """<svg><foreignObject><div xmlns="http://www.w3.org/1999/xhtml"><p>rendered markdown</p></div></foreignObject><rect/></svg>"""
         val result = SvgSanitizer.sanitize(input)
-        assertFalse(result.contains("<foreignObject"))
-        assertFalse(result.contains("injected"))
+        assertTrue(result.contains("<foreignObject"))
+        assertTrue(result.contains("rendered markdown"))
         assertTrue(result.contains("<rect/>"))
+    }
+
+    @Test
+    fun `strips dangerous content inside foreignObject`() {
+        val input = """<svg><foreignObject><div xmlns="http://www.w3.org/1999/xhtml"><p>safe</p><script>alert(1)</script><a onclick="evil()" href="javascript:evil()">x</a></div></foreignObject></svg>"""
+        val result = SvgSanitizer.sanitize(input)
+        // Wrapper and safe content kept...
+        assertTrue(result.contains("<foreignObject"))
+        assertTrue(result.contains("safe"))
+        // ...but the dangerous bits inside are still removed.
+        assertFalse(result.contains("<script"))
+        assertFalse(result.contains("alert"))
+        assertFalse(result.contains("onclick"))
+        assertFalse(result.contains("javascript:"))
     }
 
     @Test
@@ -129,11 +146,13 @@ class SvgSanitizerTest {
 
     @Test
     fun `strips multiple dangerous elements in one pass`() {
-        val input = """<svg><script>bad1</script><rect onload="bad2"/><a href="javascript:bad3"><foreignObject><div>bad4</div></foreignObject></a></svg>"""
+        val input = """<svg><script>bad1</script><rect onload="bad2"/><a href="javascript:bad3"><foreignObject><script>bad4</script></foreignObject></a></svg>"""
         val result = SvgSanitizer.sanitize(input)
         assertFalse(result.contains("bad1"))
         assertFalse(result.contains("bad2"))
         assertFalse(result.contains("bad3"))
         assertFalse(result.contains("bad4"))
+        // foreignObject wrapper itself is preserved (its dangerous child is not).
+        assertTrue(result.contains("<foreignObject"))
     }
 }

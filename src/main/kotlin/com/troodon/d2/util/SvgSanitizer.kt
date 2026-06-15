@@ -1,17 +1,25 @@
 package com.troodon.d2.util
 
 /**
- * Sanitizes SVG content before injection into JCEF browser panels.
+ * First-pass, string-level sanitizer for SVG content before it is handed to a
+ * JCEF browser panel. This is a defense-in-depth layer: the authoritative
+ * sanitization happens in-browser via DOMPurify (see [com.troodon.d2.preview.SvgPreviewRenderer]),
+ * which parses the markup with the same engine that renders it.
  *
- * Strips dangerous elements (`<script>`, `<iframe>`, `<foreignObject>`),
- * event handler attributes (`on*`), and `javascript:` protocol in hrefs.
- * Preserves `<style>` elements which D2 uses extensively for styling.
+ * Strips dangerous elements (`<script>`, `<iframe>`), event handler attributes
+ * (`on*`), and the `javascript:` protocol in hrefs. Preserves `<style>` elements,
+ * which D2 uses extensively for styling.
+ *
+ * `<foreignObject>` is intentionally NOT stripped here: D2 renders Markdown
+ * blocks (`|md ... |`) as `<foreignObject>` containing XHTML, so removing it
+ * would make Markdown disappear. Its contents are sanitized in-browser by
+ * DOMPurify instead.
  */
 object SvgSanitizer {
 
     // Elements to strip entirely (including content).
     // Case-insensitive, handles both paired tags and self-closing tags.
-    private val DANGEROUS_ELEMENTS = listOf("script", "iframe", "foreignObject")
+    private val DANGEROUS_ELEMENTS = listOf("script", "iframe")
 
     // Matches on* event handler attributes with double- or single-quoted values.
     private val EVENT_HANDLER_ATTR = Regex(

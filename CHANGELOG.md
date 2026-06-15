@@ -1,3 +1,10 @@
+## [1.0.14] - 2026-06-15
+### Fixed
+- Markdown blocks (`|md ... |`) now render in the SVG preview again. D2 emits Markdown as `<foreignObject>`, which the preview's SVG sanitizer previously stripped, leaving such blocks blank.
+
+### Security
+- Authoritative SVG sanitization now runs in-browser via a bundled DOMPurify (3.4.10). The SVG is base64-encoded and sanitized before it is inserted into the DOM, so embedded scripts never execute. `<foreignObject>` is re-allowed with scripts, `on*` handlers, `javascript:` URLs, and `<iframe>` still removed.
+
 ## [1.0.13] - 2026-04-01
 ### Added
 - Plugin verification configuration for local compatibility checks (`./gradlew verifyPlugin`)
